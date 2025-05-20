@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"; // Import useEffect
-import { useParams, Link } from "react-router-dom"; // Import useParams and Link
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -23,7 +23,7 @@ const allFiles = {
 
 
 const ReviewFilesPage = () => {
-  const { projectId } = useParams<{ projectId: string }>(); // Get project ID from URL
+  const { projectId } = useParams<{ projectId: string }>();
   const [filesToReview, setFilesToReview] = useState<typeof allFiles[keyof typeof allFiles]>([]);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
@@ -35,7 +35,7 @@ const ReviewFilesPage = () => {
     console.log(`Fetching files for project: ${projectId}`);
     const projectFiles = projectId ? allFiles[projectId as keyof typeof allFiles] || [] : [];
     setFilesToReview(projectFiles);
-  }, [projectId]); // Re-run effect if projectId changes
+  }, [projectId]);
 
 
   // Function to handle file download
@@ -112,7 +112,7 @@ const ReviewFilesPage = () => {
       // Simulate network request delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      showSuccess(`Revisão do Projeto ${projectId} confirmada com sucesso! (Simulado)`);
+      showSuccess(`Revisão do Resultado ${projectId} confirmada com sucesso! (Simulado)`); // Changed text
       // Redirect or show success message
       // navigate('/'); // Example redirect
 
@@ -138,7 +138,7 @@ const ReviewFilesPage = () => {
       // Simulate network request delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      showSuccess(`Revisão do Projeto ${projectId} negada com sucesso! (Simulado)`);
+      showSuccess(`Revisão do Resultado ${projectId} negada com sucesso! (Simulado)`); // Changed text
       // Redirect or show success message
       // navigate('/'); // Example redirect
 
@@ -156,12 +156,12 @@ const ReviewFilesPage = () => {
   return (
     <div className="container mx-auto p-4 max-w-2xl">
       <h1 className="text-3xl font-bold text-center mb-4">Podemos mandar esse resultado para o cliente?</h1>
-      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Projeto: {projectId}</h2>
+      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Resultado: {projectId}</h2> {/* Changed text */}
 
 
       {filesToReview.length === 0 ? (
         <div className="text-center text-gray-500 dark:text-gray-400">
-          Nenhum arquivo encontrado para este projeto.
+          Nenhum arquivo encontrado para este resultado. {/* Changed text */}
         </div>
       ) : (
          <div className="space-y-6 mb-8">
@@ -219,7 +219,7 @@ const ReviewFilesPage = () => {
       </div>
 
       <div className="mt-8 text-center">
-         <Link to="/" className="text-blue-500 hover:underline">Voltar para a lista de projetos</Link>
+         <Link to="/" className="text-blue-500 hover:underline">Voltar para a lista de resultados</Link> {/* Changed text */}
       </div>
     </div>
   );

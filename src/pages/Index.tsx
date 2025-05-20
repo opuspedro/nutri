@@ -12,9 +12,9 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold">Projetos para Revisão</h1>
+        <h1 className="text-4xl font-bold">Resultados para Revisão</h1> {/* Changed text */}
         <p className="text-xl text-gray-600 dark:text-gray-400 mt-2">
-          Selecione um projeto para revisar os arquivos.
+          Selecione um resultado para revisar os arquivos. {/* Changed text */}
         </p>
       </div>
 

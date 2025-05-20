@@ -25,8 +25,9 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          // Using an orange HSL value
+          DEFAULT: "hsl(30 98% 50%)", // Example orange
+          foreground: "hsl(222.2 84% 4.9%)", // Dark text for contrast in light mode
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

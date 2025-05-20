@@ -1,27 +1,49 @@
-import { useState } from "react"; // Import useState
+import { useState, useEffect } from "react"; // Import useEffect
+import { useParams, Link } from "react-router-dom"; // Import useParams and Link
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Link } from "react-router-dom";
-import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast"; // Import toast utilities
+import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast";
 
-// Placeholder data for files - replace with data fetched from your backend
-const filesToReview = [
-  { id: 'file1', name: 'Relatorio_Final_Projeto_X.pdf', minioPath: 'path/to/report.pdf' },
-  { id: 'file2', name: 'Apresentacao_Cliente_X.pptx', minioPath: 'path/to/presentation.pptx' },
-];
+// Placeholder data for files - In a real app, you would fetch this based on projectId
+const allFiles = {
+  'projeto-alpha': [
+    { id: 'file1-alpha', name: 'Relatorio_Alpha_Final.pdf', minioPath: 'path/to/alpha/report.pdf' },
+    { id: 'file2-alpha', name: 'Apresentacao_Alpha.pptx', minioPath: 'path/to/alpha/presentation.pptx' },
+  ],
+  'projeto-beta': [
+    { id: 'file1-beta', name: 'Dados_Beta.xlsx', minioPath: 'path/to/beta/data.xlsx' },
+    { id: 'file2-beta', name: 'Analise_Beta.docx', minioPath: 'path/to/beta/analysis.docx' },
+    { id: 'file3-beta', name: 'Graficos_Beta.png', minioPath: 'path/to/beta/charts.png' },
+  ],
+   'projeto-gama': [
+    { id: 'file1-gama', name: 'Relatorio_Gama.pdf', minioPath: 'path/to/gama/report.pdf' },
+  ],
+};
+
 
 const ReviewFilesPage = () => {
+  const { projectId } = useParams<{ projectId: string }>(); // Get project ID from URL
+  const [filesToReview, setFilesToReview] = useState<typeof allFiles[keyof typeof allFiles]>([]);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [denying, setDenying] = useState(false);
 
+  useEffect(() => {
+    // In a real app, fetch files from your backend based on projectId here
+    console.log(`Fetching files for project: ${projectId}`);
+    const projectFiles = projectId ? allFiles[projectId as keyof typeof allFiles] || [] : [];
+    setFilesToReview(projectFiles);
+  }, [projectId]); // Re-run effect if projectId changes
+
+
   // Function to handle file download
   // This function needs to fetch a pre-signed URL from your backend
   const handleDownload = async (fileId: string, fileMinioPath: string) => {
     setDownloadingId(fileId);
-    const loadingToastId = showLoading(`Preparando download de ${filesToReview.find(f => f.id === fileId)?.name}...`);
+    const fileName = filesToReview.find(f => f.id === fileId)?.name || 'o arquivo';
+    const loadingToastId = showLoading(`Preparando download de ${fileName}...`);
 
     try {
       console.log(`Attempting to download file from MinIO path: ${fileMinioPath}`);
@@ -34,12 +56,12 @@ const ReviewFilesPage = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Placeholder success - replace with actual download logic
-      showSuccess(`Download pronto para ${filesToReview.find(f => f.id === fileId)?.name}! (Simulado)`);
+      showSuccess(`Download pronto para ${fileName}! (Simulado)`);
       // If you got a URL, you would open it here: window.open(url, '_blank');
 
     } catch (error) {
       console.error("Download failed:", error);
-      showError(`Falha ao preparar download de ${filesToReview.find(f => f.id === fileId)?.name}.`);
+      showError(`Falha ao preparar download de ${fileName}.`);
     } finally {
       dismissToast(loadingToastId);
       setDownloadingId(null);
@@ -50,7 +72,8 @@ const ReviewFilesPage = () => {
   // This function needs to fetch a pre-signed URL from your backend
   const handlePreview = async (fileId: string, fileMinioPath: string) => {
     setPreviewingId(fileId);
-    const loadingToastId = showLoading(`Preparando preview de ${filesToReview.find(f => f.id === fileId)?.name}...`);
+     const fileName = filesToReview.find(f => f.id === fileId)?.name || 'o arquivo';
+    const loadingToastId = showLoading(`Preparando preview de ${fileName}...`);
 
     try {
       console.log(`Attempting to preview file from MinIO path: ${fileMinioPath}`);
@@ -64,12 +87,12 @@ const ReviewFilesPage = () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Placeholder success - replace with actual preview logic
-      showSuccess(`Preview pronto para ${filesToReview.find(f => f.id === fileId)?.name}! (Simulado)`);
+      showSuccess(`Preview pronto para ${fileName}! (Simulado)`);
        // If you got a URL, you would open it here: window.open(url, '_blank');
 
     } catch (error) {
       console.error("Preview failed:", error);
-      showError(`Falha ao preparar preview de ${filesToReview.find(f => f.id === fileId)?.name}.`);
+      showError(`Falha ao preparar preview de ${fileName}.`);
     } finally {
       dismissToast(loadingToastId);
       setPreviewingId(null);
@@ -82,14 +105,14 @@ const ReviewFilesPage = () => {
     const loadingToastId = showLoading("Enviando confirmação...");
 
     try {
-      console.log("Review confirmed!");
+      console.log(`Review confirmed for project: ${projectId}`);
       // TODO: Implement logic to send confirmation to your backend
-      // Example: await fetch('/api/confirm-review', { method: 'POST', body: JSON.stringify({ fileIds: filesToReview.map(f => f.id) }) });
+      // Example: await fetch('/api/confirm-review', { method: 'POST', body: JSON.stringify({ projectId: projectId, fileIds: filesToReview.map(f => f.id) }) });
 
       // Simulate network request delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      showSuccess("Revisão confirmada com sucesso! (Simulado)");
+      showSuccess(`Revisão do Projeto ${projectId} confirmada com sucesso! (Simulado)`);
       // Redirect or show success message
       // navigate('/'); // Example redirect
 
@@ -108,14 +131,14 @@ const ReviewFilesPage = () => {
     const loadingToastId = showLoading("Enviando negação...");
 
     try {
-      console.log("Review denied!");
+      console.log(`Review denied for project: ${projectId}`);
       // TODO: Implement logic to send denial to your backend
-      // Example: await fetch('/api/deny-review', { method: 'POST', body: JSON.stringify({ fileIds: filesToReview.map(f => f.id) }) });
+      // Example: await fetch('/api/deny-review', { method: 'POST', body: JSON.stringify({ projectId: projectId, fileIds: filesToReview.map(f => f.id) }) });
 
       // Simulate network request delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      showSuccess("Revisão negada com sucesso! (Simulado)");
+      showSuccess(`Revisão do Projeto ${projectId} negada com sucesso! (Simulado)`);
       // Redirect or show success message
       // navigate('/'); // Example redirect
 
@@ -132,39 +155,48 @@ const ReviewFilesPage = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
-      <h1 className="text-3xl font-bold text-center mb-8">Podemos mandar esse resultado para o cliente?</h1>
+      <h1 className="text-3xl font-bold text-center mb-4">Podemos mandar esse resultado para o cliente?</h1>
+      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Projeto: {projectId}</h2>
 
-      <div className="space-y-6 mb-8">
-        {filesToReview.map((file) => (
-          <Card key={file.id}>
-            <CardHeader>
-              <CardTitle>{file.name}</CardTitle>
-              <CardDescription>Caminho no MinIO: {file.minioPath}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Placeholder for file preview - implementation depends on file type */}
-              <div className="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 rounded-md">
-                Área de Preview (Implementação necessária)
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => handlePreview(file.id, file.minioPath)}
-                disabled={previewingId === file.id || isLoading}
-              >
-                {previewingId === file.id ? "Carregando..." : "Preview"}
-              </Button>
-              <Button
-                onClick={() => handleDownload(file.id, file.minioPath)}
-                disabled={downloadingId === file.id || isLoading}
-              >
-                 {downloadingId === file.id ? "Carregando..." : "Download"}
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+
+      {filesToReview.length === 0 ? (
+        <div className="text-center text-gray-500 dark:text-gray-400">
+          Nenhum arquivo encontrado para este projeto.
+        </div>
+      ) : (
+         <div className="space-y-6 mb-8">
+          {filesToReview.map((file) => (
+            <Card key={file.id}>
+              <CardHeader>
+                <CardTitle>{file.name}</CardTitle>
+                <CardDescription>Caminho no MinIO: {file.minioPath}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Placeholder for file preview - implementation depends on file type */}
+                <div className="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 rounded-md">
+                  Área de Preview (Implementação necessária)
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handlePreview(file.id, file.minioPath)}
+                  disabled={previewingId === file.id || isLoading}
+                >
+                  {previewingId === file.id ? "Carregando..." : "Preview"}
+                </Button>
+                <Button
+                  onClick={() => handleDownload(file.id, file.minioPath)}
+                  disabled={downloadingId === file.id || isLoading}
+                >
+                   {downloadingId === file.id ? "Carregando..." : "Download"}
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+
 
       <Separator className="my-8" />
 
@@ -173,21 +205,21 @@ const ReviewFilesPage = () => {
           variant="destructive"
           size="lg"
           onClick={handleDeny}
-          disabled={isLoading}
+          disabled={isLoading || filesToReview.length === 0}
         >
           {denying ? "Enviando..." : "Negar"}
         </Button>
         <Button
           size="lg"
           onClick={handleConfirm}
-          disabled={isLoading}
+          disabled={isLoading || filesToReview.length === 0}
         >
           {confirming ? "Enviando..." : "Confirmar"}
         </Button>
       </div>
 
       <div className="mt-8 text-center">
-         <Link to="/" className="text-blue-500 hover:underline">Voltar para a página inicial</Link>
+         <Link to="/" className="text-blue-500 hover:underline">Voltar para a lista de projetos</Link>
       </div>
     </div>
   );

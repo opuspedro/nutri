@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ReviewFilesPage from "./pages/ReviewFilesPage";
+import HistoryPage from "./pages/HistoryPage"; // Import the new page
 
 const queryClient = new QueryClient();
 
@@ -18,8 +19,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          {/* Updated route to include projectId parameter */}
           <Route path="/review/:projectId" element={<ReviewFilesPage />} />
+          <Route path="/history" element={<HistoryPage />} /> {/* Add the new history route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

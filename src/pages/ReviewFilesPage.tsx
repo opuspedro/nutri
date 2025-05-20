@@ -1,30 +1,15 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast";
-
-// Placeholder data for files - In a real app, you would fetch this based on projectId
-const allFiles = {
-  'projeto-alpha': [
-    { id: 'file1-alpha', name: 'Relatorio_Alpha_Final.pdf', minioPath: 'path/to/alpha/report.pdf' },
-    { id: 'file2-alpha', name: 'Apresentacao_Alpha.pptx', minioPath: 'path/to/alpha/presentation.pptx' },
-  ],
-  'projeto-beta': [
-    { id: 'file1-beta', name: 'Dados_Beta.xlsx', minioPath: 'path/to/beta/data.xlsx' },
-    { id: 'file2-beta', name: 'Analise_Beta.docx', minioPath: 'path/to/beta/analysis.docx' },
-    { id: 'file3-beta', name: 'Graficos_Beta.png', minioPath: 'path/to/beta/charts.png' },
-  ],
-   'projeto-gama': [
-    { id: 'file1-gama', name: 'Relatorio_Gama.pdf', minioPath: 'path/to/gama/report.pdf' },
-  ],
-};
-
+import { allProjects, markAsReviewed } from "@/state/reviewState"; // Import state functions and data
 
 const ReviewFilesPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const [filesToReview, setFilesToReview] = useState<typeof allFiles[keyof typeof allFiles]>([]);
+  const navigate = useNavigate(); // Initialize navigate
+  const [filesToReview, setFilesToReview] = useState<typeof allProjects[keyof typeof allProjects]['files']>([]);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -33,8 +18,8 @@ const ReviewFilesPage = () => {
   useEffect(() => {
     // In a real app, fetch files from your backend based on projectId here
     console.log(`Fetching files for project: ${projectId}`);
-    const projectFiles = projectId ? allFiles[projectId as keyof typeof allFiles] || [] : [];
-    setFilesToReview(projectFiles);
+    const projectData = projectId ? allProjects[projectId as keyof typeof allProjects] : undefined;
+    setFilesToReview(projectData?.files || []);
   }, [projectId]);
 
 
@@ -112,9 +97,9 @@ const ReviewFilesPage = () => {
       // Simulate network request delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      showSuccess(`Revisão do Resultado ${projectId} confirmada com sucesso! (Simulado)`); // Changed text
-      // Redirect or show success message
-      // navigate('/'); // Example redirect
+      showSuccess(`Revisão do Resultado ${projectId} confirmada com sucesso! (Simulado)`);
+      markAsReviewed(projectId!, 'confirmed'); // Mark as reviewed
+      navigate('/'); // Navigate back to index
 
     } catch (error) {
       console.error("Confirmation failed:", error);
@@ -138,9 +123,9 @@ const ReviewFilesPage = () => {
       // Simulate network request delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      showSuccess(`Revisão do Resultado ${projectId} negada com sucesso! (Simulado)`); // Changed text
-      // Redirect or show success message
-      // navigate('/'); // Example redirect
+      showSuccess(`Revisão do Resultado ${projectId} negada com sucesso! (Simulado)`);
+      markAsReviewed(projectId!, 'denied'); // Mark as reviewed
+      navigate('/'); // Navigate back to index
 
     } catch (error) {
       console.error("Denial failed:", error);
@@ -156,12 +141,12 @@ const ReviewFilesPage = () => {
   return (
     <div className="container mx-auto p-4 max-w-2xl">
       <h1 className="text-3xl font-bold text-center mb-4">Podemos mandar esse resultado para o cliente?</h1>
-      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Resultado: {projectId}</h2> {/* Changed text */}
+      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Resultado: {projectId}</h2>
 
 
       {filesToReview.length === 0 ? (
         <div className="text-center text-gray-500 dark:text-gray-400">
-          Nenhum arquivo encontrado para este resultado. {/* Changed text */}
+          Nenhum arquivo encontrado para este resultado.
         </div>
       ) : (
          <div className="space-y-6 mb-8">
@@ -219,7 +204,7 @@ const ReviewFilesPage = () => {
       </div>
 
       <div className="mt-8 text-center">
-         <Link to="/" className="text-blue-500 hover:underline">Voltar para a lista de resultados</Link> {/* Changed text */}
+         <Link to="/" className="text-blue-500 hover:underline">Voltar para a lista de resultados</Link>
       </div>
     </div>
   );

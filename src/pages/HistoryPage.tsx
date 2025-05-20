@@ -1,15 +1,17 @@
+import { useState, useEffect } from "react"; // Import useState and useEffect
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge"; // Import Badge
-
-// Placeholder data for reviewed projects - replace with data fetched from your backend
-const reviewedProjects = [
-  { id: 'projeto-alfa', name: 'Projeto Alpha', status: 'confirmed', reviewDate: '2023-10-26' },
-  { id: 'projeto-beta', name: 'Projeto Beta', status: 'denied', reviewDate: '2023-10-25' },
-  { id: 'projeto-gama', name: 'Projeto Gama', status: 'confirmed', reviewDate: '2023-10-24' },
-];
+import { Badge } from "@/components/ui/badge";
+import { getReviewedProjects } from "@/state/reviewState"; // Import getReviewedProjects
 
 const HistoryPage = () => {
+  const [reviewedProjects, setReviewedProjects] = useState<{ id: string; name: string; status: 'confirmed' | 'denied'; reviewDate: string; }[]>([]);
+
+  useEffect(() => {
+    // Fetch reviewed projects when the component mounts
+    setReviewedProjects(getReviewedProjects());
+  }, []); // Empty dependency array means this runs once on mount
+
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
       <div className="text-center mb-8">

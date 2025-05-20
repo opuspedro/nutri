@@ -1,15 +1,17 @@
+import { useState, useEffect } from "react"; // Import useState and useEffect
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button"; // Import Button
-
-// Placeholder data for projects - replace with data fetched from your backend
-const projects = [
-  { id: 'projeto-alpha', name: 'Projeto Alpha' },
-  { id: 'projeto-beta', name: 'Projeto Beta' },
-  { id: 'projeto-gama', name: 'Projeto Gama' },
-];
+import { Button } from "@/components/ui/button";
+import { getPendingProjects } from "@/state/reviewState"; // Import getPendingProjects
 
 const Index = () => {
+  const [pendingProjects, setPendingProjects] = useState<{ id: string; name: string; }[]>([]);
+
+  useEffect(() => {
+    // Fetch pending projects when the component mounts
+    setPendingProjects(getPendingProjects());
+  }, []); // Empty dependency array means this runs once on mount
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
       <div className="text-center mb-8">
@@ -26,19 +28,25 @@ const Index = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
-        {projects.map((project) => (
-          <Link key={project.id} to={`/review/${project.id}`}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle>{project.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500 dark:text-gray-400">ID: {project.id}</p>
-                {/* Add more project details here if needed */}
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+        {pendingProjects.length === 0 ? (
+           <div className="text-center text-gray-500 dark:text-gray-400 col-span-full">
+            Nenhum resultado pendente para revisão.
+          </div>
+        ) : (
+          pendingProjects.map((project) => (
+            <Link key={project.id} to={`/review/${project.id}`}>
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle>{project.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-500 dark:text-gray-400">ID: {project.id}</p>
+                  {/* Add more project details here if needed */}
+                </CardContent>
+              </Card>
+            </Link>
+          ))
+        )}
       </div>
     </div>
   );

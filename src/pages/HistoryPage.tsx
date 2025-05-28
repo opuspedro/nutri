@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react"; // Import useState and useEffect
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getReviewedProjects } from "@/state/reviewState"; // Import getReviewedProjects
+import { getReviewedProjects } from "@/state/reviewState";
 
 const HistoryPage = () => {
   const [reviewedProjects, setReviewedProjects] = useState<{ id: string; name: string; status: 'confirmed' | 'denied'; reviewDate: string; }[]>([]);
@@ -10,7 +10,7 @@ const HistoryPage = () => {
   useEffect(() => {
     // Fetch reviewed projects when the component mounts
     setReviewedProjects(getReviewedProjects());
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
@@ -30,8 +30,9 @@ const HistoryPage = () => {
           reviewedProjects.map((project) => (
             <Card key={project.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                {/* Displaying the project name with "Consultoria" prefix */}
                 <CardTitle className="text-lg font-medium">
-                  {project.name}
+                  Consultoria {project.name}
                 </CardTitle>
                  <Badge variant={project.status === 'confirmed' ? 'default' : 'destructive'}>
                     {project.status === 'confirmed' ? 'Confirmado' : 'Negado'}

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react"; // Import useState and useEffect
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getPendingProjects } from "@/state/reviewState"; // Import getPendingProjects
+import { getPendingProjects } from "@/state/reviewState";
 
 const Index = () => {
   const [pendingProjects, setPendingProjects] = useState<{ id: string; name: string; }[]>([]);
@@ -10,7 +10,7 @@ const Index = () => {
   useEffect(() => {
     // Fetch pending projects when the component mounts
     setPendingProjects(getPendingProjects());
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
@@ -19,7 +19,6 @@ const Index = () => {
         <p className="text-xl text-gray-600 dark:text-gray-400 mt-2">
           Selecione um resultado para revisar os arquivos.
         </p>
-        {/* Add History Button */}
         <div className="mt-6">
           <Link to="/history">
             <Button variant="outline">Ver Histórico de Revisões</Button>
@@ -37,7 +36,8 @@ const Index = () => {
             <Link key={project.id} to={`/review/${project.id}`}>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
-                  <CardTitle>{project.name}</CardTitle>
+                  {/* Displaying the project name with "Consultoria" prefix */}
+                  <CardTitle>Consultoria {project.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-500 dark:text-gray-400">ID: {project.id}</p>

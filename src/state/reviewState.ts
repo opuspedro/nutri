@@ -65,24 +65,19 @@ export const markAsReviewed = async (projectId: string, status: 'confirmed' | 'd
   console.log(`Marking project ${projectId} as ${status} in Supabase...`);
   try {
     // Insert a new entry into the reviews table
-    // NOTE: This will require the user to be authenticated due to RLS policy
-    // The reviewer_id should be auth.uid()
+    // RLS policy updated to allow insert without authentication
     const { data, error } = await supabase
       .from('reviews')
       .insert([
         {
           project_id: projectId,
           status: status,
-          // reviewer_id: (await supabase.auth.getUser()).data?.user?.id, // Uncomment and ensure user is logged in
+          // reviewer_id is now optional based on RLS policy
         }
       ]);
 
     if (error) {
       console.error(`Error marking project ${projectId} as ${status}:`, error);
-      // Check if the error is due to RLS (e.g., user not authenticated)
-      if (error.code === '42501') { // PostgreSQL error code for insufficient privilege
-         throw new Error("Você precisa estar logado para confirmar ou negar revisões.");
-      }
       throw error;
     }
 
@@ -118,7 +113,3 @@ export const getProjectFiles = async (projectId: string) => {
     return [];
   }
 };
-
-// Remove placeholder data as we will fetch from Supabase
-// export const allProjects = { ... };
-// const reviewedStatus: { ... } = {};

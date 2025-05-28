@@ -1,27 +1,52 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom"; // Import useNavigate
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast";
-import { allProjects, markAsReviewed } from "@/state/reviewState"; // Import state functions and data
+import { markAsReviewed, getProjectFiles } from "@/state/reviewState"; // Import Supabase functions
+
+// Define the type for files based on the Supabase query result
+interface ProjectFile {
+  id: string;
+  name: string;
+  minio_path: string;
+}
 
 const ReviewFilesPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const navigate = useNavigate(); // Initialize navigate
-  const [filesToReview, setFilesToReview] = useState<typeof allProjects[keyof typeof allProjects]['files']>([]);
+  const navigate = useNavigate();
+  const [filesToReview, setFilesToReview] = useState<ProjectFile[]>([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(true); // Loading state for files
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [denying, setDenying] = useState(false);
 
   useEffect(() => {
-    // In a real app, fetch files from your backend based on projectId here
-    console.log(`Fetching files for project: ${projectId}`);
-    const projectData = projectId ? allProjects[projectId as keyof typeof allProjects] : undefined;
-    setFilesToReview(projectData?.files || []);
-  }, [projectId]);
+    const fetchFiles = async () => {
+      if (!projectId) {
+        showError("ID do projeto não fornecido.");
+        setIsLoadingFiles(false);
+        return;
+      }
+      setIsLoadingFiles(true);
+      const loadingToastId = showLoading(`Carregando arquivos para o projeto ${projectId}...`);
+      try {
+        const files = await getProjectFiles(projectId);
+        setFilesToReview(files);
+      } catch (error) {
+        console.error("Failed to fetch files:", error);
+        showError("Falha ao carregar arquivos.");
+        setFilesToReview([]);
+      } finally {
+        dismissToast(loadingToastId);
+        setIsLoadingFiles(false);
+      }
+    };
 
+    fetchFiles();
+  }, [projectId]); // Re-run effect if projectId changes
 
   // Function to handle file download
   // This function needs to fetch a pre-signed URL from your backend
@@ -32,7 +57,7 @@ const ReviewFilesPage = () => {
 
     try {
       console.log(`Attempting to download file from MinIO path: ${fileMinioPath}`);
-      // TODO: Implement logic to fetch a pre-signed download URL from your backend
+      // TODO: Implement logic to fetch a pre-signed download URL from your backend/Edge Function
       // Example: const response = await fetch('/api/get-presigned-url', { method: 'POST', body: JSON.stringify({ path: fileMinioPath }) });
       // const { url } = await response.json();
       // window.open(url, '_blank');
@@ -62,7 +87,7 @@ const ReviewFilesPage = () => {
 
     try {
       console.log(`Attempting to preview file from MinIO path: ${fileMinioPath}`);
-      // TODO: Implement logic to fetch a pre-signed preview URL from your backend
+      // TODO: Implement logic to fetch a pre-signed preview URL from your backend/Edge Function
       // The preview method depends on the file type (e.g., embed PDF, show image, link for others)
       // Example: const response = await fetch('/api/get-presigned-url', { method: 'POST', body: JSON.stringify({ path: fileMinioPath, action: 'preview' }) });
       // const { url } = await response.json();
@@ -86,24 +111,18 @@ const ReviewFilesPage = () => {
 
   // Function to handle confirmation
   const handleConfirm = async () => {
+    if (!projectId) return;
     setConfirming(true);
     const loadingToastId = showLoading("Enviando confirmação...");
 
     try {
-      console.log(`Review confirmed for project: ${projectId}`);
-      // TODO: Implement logic to send confirmation to your backend
-      // Example: await fetch('/api/confirm-review', { method: 'POST', body: JSON.stringify({ projectId: projectId, fileIds: filesToReview.map(f => f.id) }) });
-
-      // Simulate network request delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      showSuccess(`Revisão do Resultado ${projectId} confirmada com sucesso! (Simulado)`);
-      markAsReviewed(projectId!, 'confirmed'); // Mark as reviewed
+      await markAsReviewed(projectId, 'confirmed');
+      showSuccess(`Revisão do Resultado ${projectId} confirmada com sucesso!`);
       navigate('/'); // Navigate back to index
 
-    } catch (error) {
+    } catch (error: any) { // Use 'any' or a more specific error type if possible
       console.error("Confirmation failed:", error);
-      showError("Falha ao enviar confirmação.");
+      showError(error.message || "Falha ao enviar confirmação."); // Display error message from state function
     } finally {
       dismissToast(loadingToastId);
       setConfirming(false);
@@ -112,31 +131,26 @@ const ReviewFilesPage = () => {
 
   // Function to handle denial
   const handleDeny = async () => {
+     if (!projectId) return;
     setDenying(true);
     const loadingToastId = showLoading("Enviando negação...");
 
     try {
-      console.log(`Review denied for project: ${projectId}`);
-      // TODO: Implement logic to send denial to your backend
-      // Example: await fetch('/api/deny-review', { method: 'POST', body: JSON.stringify({ projectId: projectId, fileIds: filesToReview.map(f => f.id) }) });
-
-      // Simulate network request delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      showSuccess(`Revisão do Resultado ${projectId} negada com sucesso! (Simulado)`);
-      markAsReviewed(projectId!, 'denied'); // Mark as reviewed
+      await markAsReviewed(projectId, 'denied');
+      showSuccess(`Revisão do Resultado ${projectId} negada com sucesso!`);
       navigate('/'); // Navigate back to index
 
-    } catch (error) {
+    } catch (error: any) { // Use 'any' or a more specific error type if possible
       console.error("Denial failed:", error);
-      showError("Falha ao enviar negação.");
+      showError(error.message || "Falha ao enviar negação."); // Display error message from state function
     } finally {
       dismissToast(loadingToastId);
       setDenying(false);
     }
   };
 
-  const isLoading = confirming || denying; // Disable file buttons while confirming/denying
+  const isProcessingReview = confirming || denying; // Disable buttons while confirming/denying
+  const isPageLoading = isLoadingFiles || isProcessingReview; // Disable file buttons while loading files or processing review
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
@@ -144,7 +158,11 @@ const ReviewFilesPage = () => {
       <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Resultado: {projectId}</h2>
 
 
-      {filesToReview.length === 0 ? (
+      {isLoadingFiles ? (
+         <div className="text-center text-gray-500 dark:text-gray-400">
+            Carregando arquivos...
+          </div>
+      ) : filesToReview.length === 0 ? (
         <div className="text-center text-gray-500 dark:text-gray-400">
           Nenhum arquivo encontrado para este resultado.
         </div>
@@ -154,7 +172,7 @@ const ReviewFilesPage = () => {
             <Card key={file.id}>
               <CardHeader>
                 <CardTitle>{file.name}</CardTitle>
-                <CardDescription>Caminho no MinIO: {file.minioPath}</CardDescription>
+                <CardDescription>Caminho no MinIO: {file.minio_path}</CardDescription>
               </CardHeader>
               <CardContent>
                 {/* Placeholder for file preview - implementation depends on file type */}
@@ -165,14 +183,14 @@ const ReviewFilesPage = () => {
               <CardFooter className="flex justify-end space-x-2">
                 <Button
                   variant="outline"
-                  onClick={() => handlePreview(file.id, file.minioPath)}
-                  disabled={previewingId === file.id || isLoading}
+                  onClick={() => handlePreview(file.id, file.minio_path)}
+                  disabled={previewingId === file.id || isPageLoading}
                 >
                   {previewingId === file.id ? "Carregando..." : "Preview"}
                 </Button>
                 <Button
-                  onClick={() => handleDownload(file.id, file.minioPath)}
-                  disabled={downloadingId === file.id || isLoading}
+                  onClick={() => handleDownload(file.id, file.minio_path)}
+                  disabled={downloadingId === file.id || isPageLoading}
                 >
                    {downloadingId === file.id ? "Carregando..." : "Download"}
                 </Button>
@@ -190,14 +208,14 @@ const ReviewFilesPage = () => {
           variant="destructive"
           size="lg"
           onClick={handleDeny}
-          disabled={isLoading || filesToReview.length === 0}
+          disabled={isPageLoading || filesToReview.length === 0}
         >
           {denying ? "Enviando..." : "Negar"}
         </Button>
         <Button
           size="lg"
           onClick={handleConfirm}
-          disabled={isLoading || filesToReview.length === 0}
+          disabled={isPageLoading || filesToReview.length === 0}
         >
           {confirming ? "Enviando..." : "Confirmar"}
         </Button>

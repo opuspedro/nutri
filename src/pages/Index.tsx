@@ -3,17 +3,34 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getPendingProjects } from "@/state/reviewState";
+import { showLoading, dismissToast, showError } from "@/utils/toast"; // Import toast utilities
 
 const Index = () => {
   const [pendingProjects, setPendingProjects] = useState<{ id: string; name: string; }[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
 
   useEffect(() => {
-    // Fetch pending projects when the component mounts
-    setPendingProjects(getPendingProjects());
-  }, []);
+    const fetchProjects = async () => {
+      setIsLoading(true);
+      const loadingToastId = showLoading("Carregando resultados pendentes...");
+      try {
+        const projects = await getPendingProjects();
+        setPendingProjects(projects);
+      } catch (error) {
+        console.error("Failed to fetch pending projects:", error);
+        showError("Falha ao carregar resultados pendentes.");
+        setPendingProjects([]); // Set to empty array on error
+      } finally {
+        dismissToast(loadingToastId);
+        setIsLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []); // Empty dependency array means this runs once on mount
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
+    <div className="min-h-screen flex flex-col items-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold">Resultados para Revisão</h1>
         <p className="text-xl text-gray-600 dark:text-gray-400 mt-2">
@@ -27,7 +44,11 @@ const Index = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
-        {pendingProjects.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center text-gray-500 dark:text-gray-400 col-span-full">
+            Carregando...
+          </div>
+        ) : pendingProjects.length === 0 ? (
            <div className="text-center text-gray-500 dark:text-gray-400 col-span-full">
             Nenhum resultado pendente para revisão.
           </div>
@@ -37,10 +58,10 @@ const Index = () => {
               <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
                   {/* Displaying the project name with "Consultoria" prefix */}
-                  <CardTitle>Consultoria {project.name}</CardTitle>
+                  <CardTitle className="text-lg font-medium">Consultoria {project.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-500 dark:text-gray-400">ID: {project.id}</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">ID: {project.id}</p>
                   {/* Add more project details here if needed */}
                 </CardContent>
               </Card>

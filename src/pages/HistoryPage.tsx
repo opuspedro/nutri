@@ -3,14 +3,39 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getReviewedProjects } from "@/state/reviewState";
+import { showLoading, dismissToast, showError } from "@/utils/toast"; // Import toast utilities
+
+// Define the type for reviewed projects based on the Supabase query result
+interface ReviewedProject {
+  id: string;
+  name: string;
+  status: 'confirmed' | 'denied';
+  reviewDate: string; // This will be a formatted string from the state function
+}
 
 const HistoryPage = () => {
-  const [reviewedProjects, setReviewedProjects] = useState<{ id: string; name: string; status: 'confirmed' | 'denied'; reviewDate: string; }[]>([]);
+  const [reviewedProjects, setReviewedProjects] = useState<ReviewedProject[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
 
   useEffect(() => {
-    // Fetch reviewed projects when the component mounts
-    setReviewedProjects(getReviewedProjects());
-  }, []);
+    const fetchReviewedProjects = async () => {
+      setIsLoading(true);
+      const loadingToastId = showLoading("Carregando histórico de revisões...");
+      try {
+        const projects = await getReviewedProjects();
+        setReviewedProjects(projects);
+      } catch (error) {
+        console.error("Failed to fetch reviewed projects:", error);
+        showError("Falha ao carregar histórico de revisões.");
+        setReviewedProjects([]); // Set to empty array on error
+      } finally {
+        dismissToast(loadingToastId);
+        setIsLoading(false);
+      }
+    };
+
+    fetchReviewedProjects();
+  }, []); // Empty dependency array means this runs once on mount
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
@@ -22,7 +47,11 @@ const HistoryPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
-        {reviewedProjects.length === 0 ? (
+        {isLoading ? (
+           <div className="text-center text-gray-500 dark:text-gray-400 col-span-full">
+            Carregando...
+          </div>
+        ) : reviewedProjects.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 col-span-full">
             Nenhum resultado revisado encontrado.
           </div>

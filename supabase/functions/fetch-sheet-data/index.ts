@@ -15,8 +15,10 @@ serve(async (req) => {
 
   try {
     const { fileName } = await req.json();
+    console.log(`Received request for fileName: ${fileName}`);
 
     if (!fileName) {
+      console.error('Missing fileName in request body');
       return new Response(JSON.stringify({ error: 'Missing fileName in request body' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -25,6 +27,7 @@ serve(async (req) => {
 
     // Get Google Sheets credentials from Supabase Secret
     const credentialsJson = Deno.env.get('GOOGLE_SHEETS_CREDENTIALS_JSON');
+    console.log(`Credentials secret status: ${credentialsJson ? 'Set' : 'Not Set'}`);
 
     if (!credentialsJson) {
        console.error("GOOGLE_SHEETS_CREDENTIALS_JSON secret not set.");
@@ -35,13 +38,16 @@ serve(async (req) => {
     }
 
     const credentials = JSON.parse(credentialsJson);
+    console.log("Credentials parsed successfully.");
 
     // Authenticate using google-auth-library
+    console.log("Attempting Google Auth...");
     const auth = new GoogleAuth({
       credentials,
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'], // Scope for reading sheets
     });
     const authClient = await auth.getClient();
+    console.log("Google Auth client obtained.");
 
     // --- Configuration ---
     // YOUR Google Sheet ID
@@ -52,11 +58,18 @@ serve(async (req) => {
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1;
 
-    // Note: The configuration values below are hardcoded based on your previous input.
-    // If you need to change them, you'll need to edit this file again.
-    if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z' || FILE_NAME_COLUMN_INDEX < 0) {
-         console.error("Google Sheet configuration is incomplete in Edge Function.");
-         return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set correctly.' }), {
+    console.log(`Sheet ID: ${SHEET_ID}, Range: ${SHEET_RANGE}, File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
+
+    if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z') {
+         console.error("Google Sheet ID or Range not configured in Edge Function.");
+         return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set.' }), {
+           status: 500,
+           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+         });
+    }
+     if (FILE_NAME_COLUMN_INDEX < 0) {
+         console.error("File name column index not configured correctly.");
+         return new Response(JSON.stringify({ error: 'Server configuration error: File name column index not set.' }), {
            status: 500,
            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
          });
@@ -64,15 +77,18 @@ serve(async (req) => {
 
     // Construct the Google Sheets API URL
     const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_RANGE}`;
+    console.log(`Fetching data from Google Sheets API URL: ${sheetsApiUrl}`);
 
     // Make the request using the authenticated client
     const sheetsResponse = await authClient.request({ url: sheetsApiUrl });
+    console.log(`Google Sheets API response status: ${sheetsResponse.status}`);
+
 
     if (sheetsResponse.status !== 200) {
         console.error("Error fetching sheet data from Google API:", sheetsResponse.status, sheetsResponse.statusText);
         // Attempt to read response body for more details if available
         try {
-            const errorBody = await sheetsResponse.data; // authClient.request might put body in .data
+            const errorBody = sheetsResponse.data; // authClient.request might put body in .data
             console.error("Google API Error Body:", errorBody);
         } catch (e) {
             console.error("Could not read Google API error response body:", e);
@@ -86,6 +102,7 @@ serve(async (req) => {
 
     const sheetData = sheetsResponse.data; // Assuming authClient.request puts the parsed JSON body here
     const sheetValues = sheetData?.values; // Assuming the response structure has a 'values' property
+    console.log(`Fetched ${sheetValues ? sheetValues.length : 0} rows from sheet.`);
 
     if (!sheetValues || sheetValues.length === 0) {
         console.log("No data found in the specified sheet range.");
@@ -95,10 +112,11 @@ serve(async (req) => {
         });
     }
 
-    // Find the row matching the file name
-    // Assuming the first row is headers, start search from the second row (index 1)
-    const dataRows = sheetValues.slice(1); // Skip header row if it exists
+    // Extract header row (first row) and data rows (rest)
+    const headerRow = sheetValues[0];
+    const dataRows = sheetValues.slice(1); // Skip header row
 
+    // Find the row matching the file name
     const foundRow = dataRows.find(row =>
         // Ensure the row and the target column exist before accessing
         row && row.length > FILE_NAME_COLUMN_INDEX &&
@@ -106,8 +124,9 @@ serve(async (req) => {
     );
 
     if (foundRow) {
-      console.log(`Found data for file "${fileName}" in sheet:`, foundRow);
-      return new Response(JSON.stringify({ data: foundRow }), {
+      console.log(`Found data for file "${fileName}" in sheet.`);
+      // Return both header and the found data row
+      return new Response(JSON.stringify({ data: { header: headerRow, row: foundRow } }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -121,7 +140,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error in Edge Function:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

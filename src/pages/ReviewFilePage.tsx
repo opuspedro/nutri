@@ -17,14 +17,10 @@ interface ReviewFile {
 }
 
 // Define a type for the data fetched from Google Sheets
-// Adjust this type based on the structure of the row returned by your Edge Function
+// Now expecting an object with header and row
 interface SheetData {
-  // Example: assuming your sheet row is an array of strings
-  // You might want to map this to named properties if possible
-  [key: number]: string; // Example: row[0], row[1], etc.
-  // Or if you process it in the Edge Function:
-  // fileName: string;
-  // someOtherColumn: string;
+  header: string[]; // Array of column headers
+  row: string[]; // Array of values for the found row
 }
 
 
@@ -78,7 +74,8 @@ const ReviewFilePage = () => {
          setSheetData(null);
        } else if (data && data.data) {
          console.log("Sheet data received:", data.data);
-         setSheetData(data.data as SheetData); // Cast to SheetData type
+         // Assuming data.data is { header: string[], row: string[] }
+         setSheetData(data.data as SheetData);
        } else {
          console.log("Edge Function returned no data for this file.");
          setSheetData(null); // No data found for this file
@@ -180,6 +177,9 @@ const ReviewFilePage = () => {
   const isProcessingReview = confirming || denying;
   const isPageLoading = isLoadingFile || isLoadingSheetData || isProcessingReview;
 
+  // Define the starting column index for displaying data (H is index 7)
+  const START_COLUMN_INDEX = 7;
+
   return (
     <div className="container mx-auto p-4 max-w-4xl"> {/* Increased max-width for better preview */}
       <h1 className="text-3xl font-bold text-center mb-4">Podemos mandar esse arquivo para o cliente?</h1>
@@ -229,18 +229,34 @@ const ReviewFilePage = () => {
                     <div className="text-center text-gray-500 dark:text-gray-400">
                        Carregando dados da planilha...
                      </div>
-                ) : sheetData ? (
+                ) : sheetData && sheetData.header && sheetData.row ? (
                     <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
-                        {/* Display sheet data - adjust this based on your SheetData type */}
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                            {/* Example: Displaying data from the first few columns */}
-                            {Object.entries(sheetData).map(([key, value]) => (
-                                <span key={key} className="block">{`Coluna ${parseInt(key) + 1}: ${value}`}</span>
-                            ))}
-                            {/* You'll need to map the column indices to meaningful labels */}
-                            {/* For example: <span className="block">Nome: {sheetData[0]}</span> */}
-                            {/* <span className="block">Status: {sheetData[1]}</span> */}
-                        </p>
+                        <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                            {/* Iterate from START_COLUMN_INDEX (7 for H) */}
+                            {sheetData.row.slice(START_COLUMN_INDEX).map((cellValue, index) => {
+                                // Calculate the actual column index in the original row/header
+                                const originalColumnIndex = START_COLUMN_INDEX + index;
+                                // Ensure header exists for this column
+                                if (sheetData.header.length > originalColumnIndex) {
+                                    const columnName = sheetData.header[originalColumnIndex];
+                                    // Only display if the cell has a value (not empty string, null, or undefined)
+                                    if (cellValue !== null && cellValue !== undefined && cellValue.toString().trim() !== '') {
+                                        return (
+                                            <p key={originalColumnIndex}>
+                                                <span className="font-semibold">{columnName}:</span> {cellValue}
+                                            </p>
+                                        );
+                                    }
+                                }
+                                return null; // Don't render if no value or no header
+                            })}
+                            {/* Show message if no relevant data found */}
+                            {sheetData.row.slice(START_COLUMN_INDEX).every(cellValue => !cellValue || cellValue.toString().trim() === '') && (
+                                <p className="text-center text-gray-500 dark:text-gray-400">
+                                    Nenhum dado relevante encontrado a partir da Coluna H.
+                                </p>
+                            )}
+                        </div>
                     </div>
                 ) : (
                     <div className="text-center text-gray-500 dark:text-gray-400">

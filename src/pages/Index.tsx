@@ -51,8 +51,6 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Removed Project Creation Form */}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
         {isLoading ? (
           <div className="text-center text-gray-500 dark:text-gray-400 col-span-full">
@@ -64,13 +62,29 @@ const Index = () => {
           </div>
         ) : (
           pendingFiles.map((file) => (
-            <Link key={file.id} to={`/review-file/${file.id}`}> {/* Link to the new file review page */}
+            // The outer Link is for navigating to the review page
+            <Link key={file.id} to={`/review-file/${file.id}`}>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
-                  <CardTitle className="text-lg font-medium">{file.name}</CardTitle>
+                  {/* Make the file name a link to the minio_path */}
+                  <CardTitle className="text-lg font-medium">
+                    <a
+                      href={file.minio_path}
+                      target="_blank" // Open in a new tab
+                      rel="noopener noreferrer" // Security best practice
+                      onClick={(e) => {
+                        // Prevent navigating to the review page when clicking the download link
+                        e.stopPropagation();
+                      }}
+                      className="text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      {file.name}
+                    </a>
+                  </CardTitle>
                   <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">ID: {file.id}</CardDescription>
                 </CardHeader>
                 <CardContent>
+                   {/* Display the path as text below the link */}
                    <p className="text-sm text-gray-700 dark:text-gray-300 truncate">Caminho: {file.minio_path}</p>
                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Criado em: {new Date(file.created_at).toLocaleDateString()}</p>
                 </CardContent>

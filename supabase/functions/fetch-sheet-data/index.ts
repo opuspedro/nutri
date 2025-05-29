@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-// Import the official Google Auth library via esm.sh
-import { GoogleAuth } from 'https://esm.sh/google-auth-library@9.11.0'; // Use a specific version
+// Import the official Google Auth library using npm: prefix
+import { GoogleAuth } from 'npm:google-auth-library@9.11.0'; // Use npm: prefix
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,16 +52,11 @@ serve(async (req) => {
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1;
 
-    if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z') {
-         console.error("Google Sheet ID or Range not configured in Edge Function.");
-         return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set.' }), {
-           status: 500,
-           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-         });
-    }
-     if (FILE_NAME_COLUMN_INDEX < 0) {
-         console.error("File name column index not configured correctly.");
-         return new Response(JSON.stringify({ error: 'Server configuration error: File name column index not set.' }), {
+    // Note: The configuration values below are hardcoded based on your previous input.
+    // If you need to change them, you'll need to edit this file again.
+    if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z' || FILE_NAME_COLUMN_INDEX < 0) {
+         console.error("Google Sheet configuration is incomplete in Edge Function.");
+         return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set correctly.' }), {
            status: 500,
            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
          });

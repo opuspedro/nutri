@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-// Import the official Google Sheets and Auth libraries via esm.sh
+// Import the official Google Auth library via esm.sh
 import { GoogleAuth } from 'https://esm.sh/google-auth-library@9.11.0'; // Use a specific version
-import { google } from 'https://esm.sh/@google-cloud/sheets@2.0.0'; // Use a specific version
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,16 +43,14 @@ serve(async (req) => {
     });
     const authClient = await auth.getClient();
 
-    // Initialize Google Sheets client
-    const sheets = google.sheets({ version: 'v4', auth: authClient });
-
     // --- Configuration ---
-    // REPLACE with your Google Sheet ID
-    const SHEET_ID = 'YOUR_SHEET_ID';
-    // REPLACE with your sheet name and range (e.g., 'Sheet1!A:Z')
-    const SHEET_RANGE = 'Sheet1!A:Z';
-    // REPLACE with the 0-based index of the column containing the file name (e.g., 0 for column A)
-    const FILE_NAME_COLUMN_INDEX = 0;
+    // YOUR Google Sheet ID
+    const SHEET_ID = '1dsThViSXz2fuwew9APMDWafH119crauiPVHCAIX64k4';
+    // YOUR sheet name and range (e.g., 'Sheet1!A1:Z300')
+    // Reading up to 300 rows, columns A to Z
+    const SHEET_RANGE = 'Sheet1!A1:Z300';
+    // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
+    const FILE_NAME_COLUMN_INDEX = 1;
 
     if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z') {
          console.error("Google Sheet ID or Range not configured in Edge Function.");
@@ -70,14 +67,30 @@ serve(async (req) => {
          });
     }
 
+    // Construct the Google Sheets API URL
+    const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_RANGE}`;
 
-    // Read data from the sheet
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SHEET_ID,
-      range: SHEET_RANGE,
-    });
+    // Make the request using the authenticated client
+    const sheetsResponse = await authClient.request({ url: sheetsApiUrl });
 
-    const sheetValues = response.data.values;
+    if (sheetsResponse.status !== 200) {
+        console.error("Error fetching sheet data from Google API:", sheetsResponse.status, sheetsResponse.statusText);
+        // Attempt to read response body for more details if available
+        try {
+            const errorBody = await sheetsResponse.data; // authClient.request might put body in .data
+            console.error("Google API Error Body:", errorBody);
+        } catch (e) {
+            console.error("Could not read Google API error response body:", e);
+        }
+
+        return new Response(JSON.stringify({ error: `Failed to fetch sheet data from Google API: Status ${sheetsResponse.status}` }), {
+            status: sheetsResponse.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+
+    const sheetData = sheetsResponse.data; // Assuming authClient.request puts the parsed JSON body here
+    const sheetValues = sheetData?.values; // Assuming the response structure has a 'values' property
 
     if (!sheetValues || sheetValues.length === 0) {
         console.log("No data found in the specified sheet range.");
@@ -92,11 +105,13 @@ serve(async (req) => {
     const dataRows = sheetValues.slice(1); // Skip header row if it exists
 
     const foundRow = dataRows.find(row =>
+        // Ensure the row and the target column exist before accessing
+        row && row.length > FILE_NAME_COLUMN_INDEX &&
         row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === fileName.trim()
     );
 
     if (foundRow) {
-      console.log(`Found data for file "${fileName}":`, foundRow);
+      console.log(`Found data for file "${fileName}" in sheet:`, foundRow);
       return new Response(JSON.stringify({ data: foundRow }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

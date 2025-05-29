@@ -17,9 +17,11 @@ interface PendingProject {
 
 // Function to get projects that are pending review (do not have an entry in the reviews table)
 export const getPendingProjects = async (): Promise<PendingProject[]> => {
+  console.log("--- getPendingProjects START ---");
   console.log("Fetching all projects and reviews from Supabase to find pending...");
   try {
     // Step 1: Fetch all projects
+    console.log("Step 1: Fetching all projects...");
     const { data: allProjectsData, error: projectsError } = await supabase
       .from('projects')
       .select('id, name');
@@ -29,14 +31,16 @@ export const getPendingProjects = async (): Promise<PendingProject[]> => {
       throw projectsError;
     }
 
-    console.log("All projects fetched:", allProjectsData);
+    console.log("Step 1 Result: All projects fetched:", allProjectsData);
 
     if (!allProjectsData || allProjectsData.length === 0) {
       console.log("No projects found in the database.");
+      console.log("--- getPendingProjects END (No projects) ---");
       return []; // No projects at all, return empty array
     }
 
     // Step 2: Fetch all reviews
+    console.log("Step 2: Fetching all reviews...");
     const { data: allReviewsData, error: reviewsError } = await supabase
       .from('reviews')
       .select('project_id'); // Only need the project_id to identify reviewed projects
@@ -47,22 +51,27 @@ export const getPendingProjects = async (): Promise<PendingProject[]> => {
       console.warn("Could not fetch reviews, assuming no projects are reviewed.");
     }
 
-    console.log("All reviews fetched:", allReviewsData);
+    console.log("Step 2 Result: All reviews fetched:", allReviewsData);
 
     // Step 3: Identify pending project IDs by filtering projects that do NOT have a review entry
+    console.log("Step 3: Identifying pending projects...");
     const reviewedProjectIds = new Set(allReviewsData?.map(review => review.project_id) || []);
+    console.log("Reviewed project IDs set:", reviewedProjectIds);
+
     const pendingProjectsData = allProjectsData.filter(project => !reviewedProjectIds.has(project.id));
 
-    console.log("Pending projects identified:", pendingProjectsData);
+    console.log("Step 3 Result: Pending projects identified:", pendingProjectsData);
 
     if (pendingProjectsData.length === 0) {
       console.log("No pending projects found after filtering.");
+      console.log("--- getPendingProjects END (No pending projects) ---");
       return []; // No pending projects after filtering, return empty array
     }
 
     const pendingProjectIds = pendingProjectsData.map(p => p.id);
+    console.log("Pending project IDs list:", pendingProjectIds);
 
-    console.log("Fetching files for pending project IDs:", pendingProjectIds);
+    console.log("Step 4: Fetching files for pending project IDs:", pendingProjectIds);
     // Step 4: Fetch all files for these pending project IDs
     const { data: filesData, error: filesError } = await supabase
       .from('files')
@@ -74,9 +83,10 @@ export const getPendingProjects = async (): Promise<PendingProject[]> => {
       throw filesError; // Re-throw to be caught by the component
     }
 
-    console.log("Files for pending projects fetched:", filesData);
+    console.log("Step 4 Result: Files for pending projects fetched:", filesData);
 
     // Step 5 & 6: Group files by project_id and combine with pending project data
+    console.log("Step 5 & 6: Grouping files and combining with projects...");
     const filesByProjectId = filesData.reduce((acc, file) => {
       if (!acc[file.project_id]) {
         acc[file.project_id] = [];
@@ -86,6 +96,8 @@ export const getPendingProjects = async (): Promise<PendingProject[]> => {
       acc[file.project_id].push(fileWithoutProjectId);
       return acc;
     }, {} as Record<string, Omit<ProjectFile, 'project_id'>[]>);
+    console.log("Files grouped by project ID:", filesByProjectId);
+
 
     const pendingProjectsWithFiles: PendingProject[] = pendingProjectsData.map(project => ({
       id: project.id,
@@ -93,10 +105,12 @@ export const getPendingProjects = async (): Promise<PendingProject[]> => {
       files: filesByProjectId[project.id] || [], // Attach the files for this project
     }));
 
-    console.log("Combined pending projects with files:", pendingProjectsWithFiles);
+    console.log("Step 6 Result: Combined pending projects with files:", pendingProjectsWithFiles);
+    console.log("--- getPendingProjects END (Success) ---");
     return pendingProjectsWithFiles;
 
   } catch (error) {
+    console.error("--- getPendingProjects END (Error) ---");
     console.error("Failed to fetch pending projects and files:", error);
     // Re-throw the error to be handled by the calling component (Index.tsx)
     throw error;

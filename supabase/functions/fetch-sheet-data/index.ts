@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { GoogleSheets } from "https://deno.land/x/google_sheets@v2.0.0/mod.ts";
+// Import the official Google Sheets and Auth libraries via esm.sh
+import { GoogleAuth } from 'https://esm.sh/google-auth-library@9.11.0'; // Use a specific version
+import { google } from 'https://esm.sh/@google-cloud/sheets@2.0.0'; // Use a specific version
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,16 +13,6 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
-  const supabaseClient = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    {
-      global: {
-        headers: { Authorization: `Bearer ${req.headers.get('Authorization')}` },
-      },
-    }
-  );
 
   try {
     const { fileName } = await req.json();
@@ -46,17 +37,20 @@ serve(async (req) => {
 
     const credentials = JSON.parse(credentialsJson);
 
-    // Initialize Google Sheets client
-    const sheets = new GoogleSheets({
-      access_token: credentials.private_key,
-      client_email: credentials.client_email,
-      // Add other necessary fields from your JSON if required by the library
+    // Authenticate using google-auth-library
+    const auth = new GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'], // Scope for reading sheets
     });
+    const authClient = await auth.getClient();
+
+    // Initialize Google Sheets client
+    const sheets = google.sheets({ version: 'v4', auth: authClient });
 
     // --- Configuration ---
     const SHEET_ID = 'YOUR_SHEET_ID'; // <-- REPLACE with your Google Sheet ID
-    const SHEET_RANGE = 'Sheet1!A:Z'; // <-- REPLACE with your sheet name and range
-    const FILE_NAME_COLUMN_INDEX = 0; // <-- REPLACE with the 0-based index of the column containing the file name
+    const SHEET_RANGE = 'Sheet1!A:Z'; // <-- REPLACE with your sheet name and range (e.g., 'Sheet1!A:Z')
+    const FILE_NAME_COLUMN_INDEX = 0; // <-- REPLACE with the 0-based index of the column containing the file name (e.g., 0 for column A)
 
     if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z') {
          console.error("Google Sheet ID or Range not configured in Edge Function.");
@@ -75,9 +69,14 @@ serve(async (req) => {
 
 
     // Read data from the sheet
-    const sheetData = await sheets.getSpreadsheetValues(SHEET_ID, SHEET_RANGE);
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID,
+      range: SHEET_RANGE,
+    });
 
-    if (!sheetData || sheetData.values.length === 0) {
+    const sheetValues = response.data.values;
+
+    if (!sheetValues || sheetValues.length === 0) {
         console.log("No data found in the specified sheet range.");
         return new Response(JSON.stringify({ data: null, message: 'No data found in sheet.' }), {
           status: 200,
@@ -87,7 +86,7 @@ serve(async (req) => {
 
     // Find the row matching the file name
     // Assuming the first row is headers, start search from the second row (index 1)
-    const dataRows = sheetData.values.slice(1); // Skip header row if it exists
+    const dataRows = sheetValues.slice(1); // Skip header row if it exists
 
     const foundRow = dataRows.find(row =>
         row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === fileName.trim()

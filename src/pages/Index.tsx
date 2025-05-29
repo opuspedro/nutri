@@ -1,12 +1,26 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getPendingProjects } from "@/state/reviewState";
 import { showLoading, dismissToast, showError } from "@/utils/toast"; // Import toast utilities
 
+// Define the type for files based on the Supabase query result
+interface ProjectFile {
+  id: string;
+  name: string;
+  minio_path: string;
+}
+
+// Define the type for pending projects including nested files
+interface PendingProject {
+  id: string;
+  name: string;
+  files: ProjectFile[]; // Add files array
+}
+
 const Index = () => {
-  const [pendingProjects, setPendingProjects] = useState<{ id: string; name: string; }[]>([]);
+  const [pendingProjects, setPendingProjects] = useState<PendingProject[]>([]);
   const [isLoading, setIsLoading] = useState(true); // Add loading state
 
   useEffect(() => {
@@ -59,10 +73,21 @@ const Index = () => {
                 <CardHeader>
                   {/* Displaying the project name with "Consultoria" prefix */}
                   <CardTitle className="text-lg font-medium">Consultoria {project.name}</CardTitle>
+                  <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">ID: {project.id}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">ID: {project.id}</p>
-                  {/* Add more project details here if needed */}
+                  <h4 className="text-md font-semibold mb-2">Arquivos:</h4>
+                  {project.files && project.files.length > 0 ? (
+                    <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300">
+                      {project.files.map(file => (
+                        <li key={file.id} className="truncate">
+                          <span className="font-medium">{file.name}:</span> {file.minio_path}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum arquivo associado.</p>
+                  )}
                 </CardContent>
               </Card>
             </Link>

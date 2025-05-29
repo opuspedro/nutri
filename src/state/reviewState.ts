@@ -202,3 +202,29 @@ export const getProjectFiles = async (projectId: string): Promise<Omit<ProjectFi
     return [];
   }
 };
+
+// New function to create a project
+export const createProject = async (name: string) => {
+  console.log(`Creating new project with name: ${name}...`);
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .insert([
+        { name: name }
+      ])
+      .select(); // Select the inserted data to get the new project ID
+
+    if (error) {
+      console.error("Error creating project:", error);
+      throw error;
+    }
+
+    console.log("Project created successfully:", data);
+    // Return the created project data (should be an array with one item)
+    return data ? data[0] : null;
+
+  } catch (error) {
+    console.error("Failed to create project:", error);
+    throw error; // Re-throw the error
+  }
+};

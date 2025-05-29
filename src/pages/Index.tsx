@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // Import useCallback
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getPendingProjects } from "@/state/reviewState";
 import { showLoading, dismissToast, showError } from "@/utils/toast"; // Import toast utilities
+import ProjectCreationForm from "@/components/ProjectCreationForm"; // Import the new form component
 
 // Define the type for files based on the Supabase query result
 interface ProjectFile {
@@ -23,25 +24,26 @@ const Index = () => {
   const [pendingProjects, setPendingProjects] = useState<PendingProject[]>([]);
   const [isLoading, setIsLoading] = useState(true); // Add loading state
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      setIsLoading(true);
-      const loadingToastId = showLoading("Carregando resultados pendentes...");
-      try {
-        const projects = await getPendingProjects();
-        setPendingProjects(projects);
-      } catch (error) {
-        console.error("Failed to fetch pending projects:", error);
-        showError("Falha ao carregar resultados pendentes.");
-        setPendingProjects([]); // Set to empty array on error
-      } finally {
-        dismissToast(loadingToastId);
-        setIsLoading(false);
-      }
-    };
+  // Use useCallback to memoize the fetch function
+  const fetchProjects = useCallback(async () => {
+    setIsLoading(true);
+    const loadingToastId = showLoading("Carregando resultados pendentes...");
+    try {
+      const projects = await getPendingProjects();
+      setPendingProjects(projects);
+    } catch (error) {
+      console.error("Failed to fetch pending projects:", error);
+      showError("Falha ao carregar resultados pendentes.");
+      setPendingProjects([]); // Set to empty array on error
+    } finally {
+      dismissToast(loadingToastId);
+      setIsLoading(false);
+    }
+  }, []); // Empty dependency array means this function is created once
 
+  useEffect(() => {
     fetchProjects();
-  }, []); // Empty dependency array means this runs once on mount
+  }, [fetchProjects]); // Effect depends on the memoized fetchProjects function
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
@@ -57,6 +59,9 @@ const Index = () => {
         </div>
       </div>
 
+      {/* Add the Project Creation Form */}
+      <ProjectCreationForm onProjectCreated={fetchProjects} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
         {isLoading ? (
           <div className="text-center text-gray-500 dark:text-gray-400 col-span-full">
@@ -64,7 +69,7 @@ const Index = () => {
           </div>
         ) : pendingProjects.length === 0 ? (
            <div className="text-center text-gray-500 dark:text-gray-400 col-span-full">
-            Nenhum resultado pendente para revisão.
+            Nenhum resultado pendente para revisão. Crie um novo acima.
           </div>
         ) : (
           pendingProjects.map((project) => (

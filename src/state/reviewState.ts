@@ -26,11 +26,13 @@ export const getPendingFiles = async (): Promise<ReviewFile[]> => {
   console.log("--- getPendingFiles START ---");
   console.log("Fetching files that do not have a review...");
   try {
-    // Select files that do NOT have a matching entry in the 'reviews' table
+    // Select files and LEFT JOIN with reviews.
+    // Filter where the joined review's file_id is null.
+    // This selects files that do not have a corresponding review entry.
     const { data, error } = await supabase
       .from('files')
-      .select('id, name, minio_path, created_at') // Select file details
-      .is_null('reviews.file_id'); // Filter for files where the joined review's file_id is null
+      .select('id, name, minio_path, created_at, reviews!left(file_id)') // Select file details and LEFT JOIN reviews
+      .is('reviews.file_id', null); // Filter for files where the joined review's file_id is null
 
     if (error) {
       console.error("Error fetching pending files:", error);
@@ -39,6 +41,9 @@ export const getPendingFiles = async (): Promise<ReviewFile[]> => {
 
     console.log("Pending files fetched:", data);
     console.log("--- getPendingFiles END (Success) ---");
+    // The data structure will include the joined reviews column,
+    // but we only need the file details for the return type.
+    // The filter ensures only files without reviews are returned.
     return data || [];
 
   } catch (error) {

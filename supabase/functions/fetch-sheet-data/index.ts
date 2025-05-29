@@ -8,14 +8,20 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("Edge Function received request.");
+  console.log("Method:", req.method);
+  console.log("Headers:", req.headers);
+
   // Handle CORS OPTIONS request
   if (req.method === 'OPTIONS') {
+    console.log("Handling OPTIONS request.");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log("Attempting to parse request body...");
     const { fileName } = await req.json();
-    console.log(`Received request for fileName: ${fileName}`);
+    console.log("Request body parsed successfully. fileName:", fileName);
 
     if (!fileName) {
       console.error('Missing fileName in request body');
@@ -60,16 +66,9 @@ serve(async (req) => {
 
     console.log(`Sheet ID: ${SHEET_ID}, Range: ${SHEET_RANGE}, File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
 
-    if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z') {
-         console.error("Google Sheet ID or Range not configured in Edge Function.");
-         return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set.' }), {
-           status: 500,
-           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-         });
-    }
-     if (FILE_NAME_COLUMN_INDEX < 0) {
-         console.error("File name column index not configured correctly.");
-         return new Response(JSON.stringify({ error: 'Server configuration error: File name column index not set.' }), {
+    if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z' || FILE_NAME_COLUMN_INDEX < 0) {
+         console.error("Google Sheet configuration is incomplete in Edge Function.");
+         return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set correctly.' }), {
            status: 500,
            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
          });

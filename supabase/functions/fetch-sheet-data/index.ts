@@ -48,9 +48,12 @@ serve(async (req) => {
     const sheets = google.sheets({ version: 'v4', auth: authClient });
 
     // --- Configuration ---
-    const SHEET_ID = 'YOUR_SHEET_ID'; // <-- REPLACE with your Google Sheet ID
-    const SHEET_RANGE = 'Sheet1!A:Z'; // <-- REPLACE with your sheet name and range (e.g., 'Sheet1!A:Z')
-    const FILE_NAME_COLUMN_INDEX = 0; // <-- REPLACE with the 0-based index of the column containing the file name (e.g., 0 for column A)
+    // REPLACE with your Google Sheet ID
+    const SHEET_ID = 'YOUR_SHEET_ID';
+    // REPLACE with your sheet name and range (e.g., 'Sheet1!A:Z')
+    const SHEET_RANGE = 'Sheet1!A:Z';
+    // REPLACE with the 0-based index of the column containing the file name (e.g., 0 for column A)
+    const FILE_NAME_COLUMN_INDEX = 0;
 
     if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z') {
          console.error("Google Sheet ID or Range not configured in Edge Function.");

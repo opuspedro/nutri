@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast";
 import { markFileAsReviewed, getFileById } from "@/state/reviewState"; // Import file-based functions
 import { Download, Eye, EyeOff } from "lucide-react"; // Import icons, including EyeOff
+import { supabase } from "@/integrations/supabase/client"; // Import Supabase client
 
 // Define the type for a single file
 interface ReviewFile {
@@ -15,42 +16,98 @@ interface ReviewFile {
   created_at: string;
 }
 
+// Define a type for the data fetched from Google Sheets
+// Adjust this type based on the structure of the row returned by your Edge Function
+interface SheetData {
+  // Example: assuming your sheet row is an array of strings
+  // You might want to map this to named properties if possible
+  [key: number]: string; // Example: row[0], row[1], etc.
+  // Or if you process it in the Edge Function:
+  // fileName: string;
+  // someOtherColumn: string;
+}
+
+
 const ReviewFilePage = () => {
   const { fileId } = useParams<{ fileId: string }>();
   const navigate = useNavigate();
   const [fileToReview, setFileToReview] = useState<ReviewFile | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(true); // Loading state for the file
+  const [sheetData, setSheetData] = useState<SheetData | null>(null); // State for sheet data
+  const [isLoadingSheetData, setIsLoadingSheetData] = useState(false); // Loading state for sheet data
   const [downloading, setDownloading] = useState(false);
   const [showPreview, setShowPreview] = useState(false); // State to control preview visibility
   const [confirming, setConfirming] = useState(false);
   const [denying, setDenying] = useState(false);
 
-  useEffect(() => {
-    const fetchFile = async () => {
-      if (!fileId) {
-        showError("ID do arquivo não fornecido.");
-        setIsLoadingFile(false);
-        return;
-      }
-      setIsLoadingFile(true);
-      const loadingToastId = showLoading(`Carregando arquivo ${fileId}...`);
-      try {
-        const file = await getFileById(fileId);
-        setFileToReview(file);
-        if (!file) {
-             showError("Arquivo não encontrado.");
-        }
-      } catch (error) {
-        console.error("Failed to fetch file:", error);
-        showError("Falha ao carregar arquivo.");
-        setFileToReview(null); // Set to null on error
-      } finally {
-        dismissToast(loadingToastId);
-        setIsLoadingFile(false);
-      }
-    };
+  // Function to fetch file details
+  const fetchFile = async (id: string) => {
+     setIsLoadingFile(true);
+     const loadingToastId = showLoading(`Carregando arquivo ${id}...`);
+     try {
+       const file = await getFileById(id);
+       setFileToReview(file);
+       if (!file) {
+            showError("Arquivo não encontrado.");
+       }
+       return file; // Return file data to be used for fetching sheet data
+     } catch (error) {
+       console.error("Failed to fetch file:", error);
+       showError("Falha ao carregar arquivo.");
+       setFileToReview(null);
+       return null;
+     } finally {
+       dismissToast(loadingToastId);
+       setIsLoadingFile(false);
+     }
+   };
 
-    fetchFile();
+   // Function to fetch sheet data
+   const fetchSheetData = async (fileName: string) => {
+     setIsLoadingSheetData(true);
+     console.log(`Fetching sheet data for file: ${fileName}`);
+     try {
+       // Invoke the Edge Function
+       const { data, error } = await supabase.functions.invoke('fetch-sheet-data', {
+         body: { fileName: fileName },
+       });
+
+       if (error) {
+         console.error("Error invoking Edge Function:", error);
+         showError(`Falha ao carregar dados da planilha: ${error.message}`);
+         setSheetData(null);
+       } else if (data && data.data) {
+         console.log("Sheet data received:", data.data);
+         setSheetData(data.data as SheetData); // Cast to SheetData type
+       } else {
+         console.log("Edge Function returned no data for this file.");
+         setSheetData(null); // No data found for this file
+       }
+     } catch (error) {
+       console.error("Failed to fetch sheet data:", error);
+       showError("Falha ao carregar dados da planilha.");
+       setSheetData(null);
+     } finally {
+       setIsLoadingSheetData(false);
+     }
+   };
+
+
+  useEffect(() => {
+    if (!fileId) {
+      showError("ID do arquivo não fornecido.");
+      setIsLoadingFile(false);
+      return;
+    }
+
+    // Fetch file details first
+    fetchFile(fileId).then(file => {
+        // If file details are successfully fetched, then fetch sheet data
+        if (file && file.name) {
+            fetchSheetData(file.name);
+        }
+    });
+
   }, [fileId]); // Re-run effect if fileId changes
 
   // Function to handle file download using the public minio_path URL
@@ -121,7 +178,7 @@ const ReviewFilePage = () => {
   };
 
   const isProcessingReview = confirming || denying;
-  const isPageLoading = isLoadingFile || isProcessingReview;
+  const isPageLoading = isLoadingFile || isLoadingSheetData || isProcessingReview;
 
   return (
     <div className="container mx-auto p-4 max-w-4xl"> {/* Increased max-width for better preview */}
@@ -146,25 +203,52 @@ const ReviewFilePage = () => {
                  <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">Criado em: {new Date(fileToReview.created_at).toLocaleDateString()}</CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Area de Preview */}
+                {/* Area de Preview do Arquivo */}
                 {showPreview && fileToReview.minio_path ? (
-                    // Render iframe if showPreview is true and minio_path exists
-                    <div className="w-full h-[600px] border rounded-md overflow-hidden"> {/* Added height and border */}
+                    <div className="w-full h-[600px] border rounded-md overflow-hidden">
                         <iframe
                             src={fileToReview.minio_path}
                             title={`Preview de ${fileToReview.name}`}
                             className="w-full h-full"
-                            style={{ border: 'none' }} // Remove default iframe border
+                            style={{ border: 'none' }}
                         >
                             Seu navegador não suporta iframes. Você pode baixar o arquivo para visualizá-lo.
                         </iframe>
                     </div>
                 ) : (
-                    // Show placeholder when preview is not active
                     <div className="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 rounded-md">
                       Clique em "Mostrar Preview" para visualizar o arquivo.
                     </div>
                 )}
+
+                <Separator className="my-6" />
+
+                {/* Area de Dados da Planilha */}
+                <h3 className="text-xl font-semibold mb-4">Dados da Planilha Associados</h3>
+                {isLoadingSheetData ? (
+                    <div className="text-center text-gray-500 dark:text-gray-400">
+                       Carregando dados da planilha...
+                     </div>
+                ) : sheetData ? (
+                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
+                        {/* Display sheet data - adjust this based on your SheetData type */}
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                            {/* Example: Displaying data from the first few columns */}
+                            {Object.entries(sheetData).map(([key, value]) => (
+                                <span key={key} className="block">{`Coluna ${parseInt(key) + 1}: ${value}`}</span>
+                            ))}
+                            {/* You'll need to map the column indices to meaningful labels */}
+                            {/* For example: <span className="block">Nome: {sheetData[0]}</span> */}
+                            {/* <span className="block">Status: {sheetData[1]}</span> */}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="text-center text-gray-500 dark:text-gray-400">
+                       Nenhum dado encontrado na planilha para este arquivo.
+                     </div>
+                )}
+
+
               </CardContent>
               <CardFooter className="flex justify-end space-x-2">
                  {/* Preview Button - Toggles visibility */}

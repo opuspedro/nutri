@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"; // Import CardFooter
 import { Button } from "@/components/ui/button";
-import { getPendingFiles } from "@/state/reviewState"; // Import the new function
-import { showLoading, dismissToast, showError } from "@/utils/toast";
+import { getPendingFiles } from "@/state/reviewState";
+import { showLoading, dismissToast, showError, showSuccess } from "@/utils/toast"; // Import showSuccess
+import { Download, Eye } from "lucide-react"; // Import icons
 
 // Define the type for pending files
 interface PendingFile {
@@ -14,8 +15,10 @@ interface PendingFile {
 }
 
 const Index = () => {
+  const navigate = useNavigate(); // Initialize useNavigate
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null); // State to track which file is being downloaded
 
   const fetchPendingFiles = useCallback(async () => {
     setIsLoading(true);
@@ -36,6 +39,32 @@ const Index = () => {
   useEffect(() => {
     fetchPendingFiles();
   }, [fetchPendingFiles]);
+
+  // Function to handle file download
+  const handleDownload = (file: PendingFile) => {
+    setDownloadingFileId(file.id);
+    const loadingToastId = showLoading(`Preparando download de ${file.name}...`);
+
+    try {
+      console.log(`Attempting to download file from public URL: ${file.minio_path}`);
+      // Use the public URL directly to open in a new tab, which often triggers download
+      window.open(file.minio_path, '_blank');
+      showSuccess(`Download iniciado para ${file.name}!`);
+
+    } catch (error) {
+      console.error("Download failed:", error);
+      showError(`Falha ao iniciar download de ${file.name}.`);
+    } finally {
+      dismissToast(loadingToastId);
+      setDownloadingFileId(null);
+    }
+  };
+
+  // Function to handle navigation to the review page
+  const handleReviewClick = (fileId: string) => {
+    navigate(`/review-file/${fileId}`);
+  };
+
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
@@ -62,34 +91,40 @@ const Index = () => {
           </div>
         ) : (
           pendingFiles.map((file) => (
-            // The outer Link is for navigating to the review page
-            <Link key={file.id} to={`/review-file/${file.id}`}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            // Card itself is not a link anymore, actions are via buttons
+              <Card key={file.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
                 <CardHeader>
-                  {/* Make the file name a link to the minio_path */}
-                  <CardTitle className="text-lg font-medium">
-                    <a
-                      href={file.minio_path}
-                      target="_blank" // Open in a new tab
-                      rel="noopener noreferrer" // Security best practice
-                      onClick={(e) => {
-                        // Prevent navigating to the review page when clicking the download link
-                        e.stopPropagation();
-                      }}
-                      className="text-blue-600 hover:underline dark:text-blue-400"
-                    >
-                      {file.name}
-                    </a>
-                  </CardTitle>
+                  {/* File name is now just text */}
+                  <CardTitle className="text-lg font-medium truncate">{file.name}</CardTitle>
                   <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">ID: {file.id}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                   {/* Display the path as text below the link */}
+                <CardContent className="flex-grow">
+                   {/* Display the path as text */}
                    <p className="text-sm text-gray-700 dark:text-gray-300 truncate">Caminho: {file.minio_path}</p>
                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Criado em: {new Date(file.created_at).toLocaleDateString()}</p>
                 </CardContent>
+                <CardFooter className="flex justify-between items-center">
+                    {/* Download Button */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownload(file)}
+                        disabled={downloadingFileId === file.id}
+                    >
+                        <Download className="mr-2 h-4 w-4" />
+                        {downloadingFileId === file.id ? "Baixando..." : "Download"}
+                    </Button>
+                     {/* Review Button */}
+                    <Button
+                        variant="default" // Use default variant for primary action
+                        size="sm"
+                        onClick={() => handleReviewClick(file.id)}
+                    >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Revisar
+                    </Button>
+                </CardFooter>
               </Card>
-            </Link>
           ))
         )}
       </div>

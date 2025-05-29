@@ -10,14 +10,14 @@ import { markAsReviewed, getProjectFiles } from "@/state/reviewState"; // Import
 interface ProjectFile {
   id: string;
   name: string;
-  minio_path: string;
+  minio_path: string; // This is expected to be a public URL
 }
 
 const ReviewFilesPage = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [filesToReview, setFilesToReview] = useState<ProjectFile[]>([]);
-  const [isLoadingFiles, setIsLoadingFiles] = useState(true); // Loading state for files
+  const [isLoadingFiles, setIsLoading] = useState(true); // Loading state for files
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -27,10 +27,10 @@ const ReviewFilesPage = () => {
     const fetchFiles = async () => {
       if (!projectId) {
         showError("ID do projeto não fornecido.");
-        setIsLoadingFiles(false);
+        setIsLoading(false);
         return;
       }
-      setIsLoadingFiles(true);
+      setIsLoading(true);
       const loadingToastId = showLoading(`Carregando arquivos para o projeto ${projectId}...`);
       try {
         const files = await getProjectFiles(projectId);
@@ -41,68 +41,49 @@ const ReviewFilesPage = () => {
         setFilesToReview([]);
       } finally {
         dismissToast(loadingToastId);
-        setIsLoadingFiles(false);
+        setIsLoading(false);
       }
     };
 
     fetchFiles();
   }, [projectId]); // Re-run effect if projectId changes
 
-  // Function to handle file download
-  // This function needs to fetch a pre-signed URL from your backend
-  const handleDownload = async (fileId: string, fileMinioPath: string) => {
+  // Function to handle file download using the public minio_path URL
+  const handleDownload = (fileId: string, fileMinioPath: string) => {
     setDownloadingId(fileId);
     const fileName = filesToReview.find(f => f.id === fileId)?.name || 'o arquivo';
     const loadingToastId = showLoading(`Preparando download de ${fileName}...`);
 
     try {
-      console.log(`Attempting to download file from MinIO path: ${fileMinioPath}`);
-      // TODO: Implement logic to fetch a pre-signed download URL from your backend/Edge Function
-      // Example: const response = await fetch('/api/get-presigned-url', { method: 'POST', body: JSON.stringify({ path: fileMinioPath }) });
-      // const { url } = await response.json();
-      // window.open(url, '_blank');
-
-      // Simulate network request delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Placeholder success - replace with actual download logic
-      showSuccess(`Download pronto para ${fileName}! (Simulado)`);
-      // If you got a URL, you would open it here: window.open(url, '_blank');
+      console.log(`Attempting to download file from public URL: ${fileMinioPath}`);
+      // Use the public URL directly
+      window.open(fileMinioPath, '_blank');
+      showSuccess(`Download iniciado para ${fileName}!`);
 
     } catch (error) {
       console.error("Download failed:", error);
-      showError(`Falha ao preparar download de ${fileName}.`);
+      showError(`Falha ao iniciar download de ${fileName}.`);
     } finally {
       dismissToast(loadingToastId);
       setDownloadingId(null);
     }
   };
 
-  // Function to handle file preview
-  // This function needs to fetch a pre-signed URL from your backend
-  const handlePreview = async (fileId: string, fileMinioPath: string) => {
+  // Function to handle file preview using the public minio_path URL
+  const handlePreview = (fileId: string, fileMinioPath: string) => {
     setPreviewingId(fileId);
      const fileName = filesToReview.find(f => f.id === fileId)?.name || 'o arquivo';
     const loadingToastId = showLoading(`Preparando preview de ${fileName}...`);
 
     try {
-      console.log(`Attempting to preview file from MinIO path: ${fileMinioPath}`);
-      // TODO: Implement logic to fetch a pre-signed preview URL from your backend/Edge Function
-      // The preview method depends on the file type (e.g., embed PDF, show image, link for others)
-      // Example: const response = await fetch('/api/get-presigned-url', { method: 'POST', body: JSON.stringify({ path: fileMinioPath, action: 'preview' }) });
-      // const { url } = await response.json();
-      // window.open(url, '_blank'); // Simple approach: open in new tab
-
-      // Simulate network request delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Placeholder success - replace with actual preview logic
-      showSuccess(`Preview pronto para ${fileName}! (Simulado)`);
-       // If you got a URL, you would open it here: window.open(url, '_blank');
+      console.log(`Attempting to preview file from public URL: ${fileMinioPath}`);
+      // Use the public URL directly for preview (opens in new tab)
+      window.open(fileMinioPath, '_blank');
+      showSuccess(`Preview aberto para ${fileName}!`);
 
     } catch (error) {
       console.error("Preview failed:", error);
-      showError(`Falha ao preparar preview de ${fileName}.`);
+      showError(`Falha ao abrir preview de ${fileName}.`);
     } finally {
       dismissToast(loadingToastId);
       setPreviewingId(null);
@@ -176,8 +157,9 @@ const ReviewFilesPage = () => {
               </CardHeader>
               <CardContent>
                 {/* Placeholder for file preview - implementation depends on file type */}
+                {/* If minio_path is a direct public URL, you could potentially embed images/PDFs here */}
                 <div className="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 rounded-md">
-                  Área de Preview (Implementação necessária)
+                  Área de Preview (Implementação específica por tipo de arquivo necessária se não for apenas abrir em nova aba)
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end space-x-2">

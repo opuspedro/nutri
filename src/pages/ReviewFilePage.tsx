@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast";
 import { markFileAsReviewed, getFileById } from "@/state/reviewState"; // Import file-based functions
+import { Download, Eye, EyeOff } from "lucide-react"; // Import icons, including EyeOff
 
 // Define the type for a single file
 interface ReviewFile {
@@ -20,7 +21,7 @@ const ReviewFilePage = () => {
   const [fileToReview, setFileToReview] = useState<ReviewFile | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(true); // Loading state for the file
   const [downloading, setDownloading] = useState(false);
-  const [previewing, setPreviewing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false); // State to control preview visibility
   const [confirming, setConfirming] = useState(false);
   const [denying, setDenying] = useState(false);
 
@@ -73,25 +74,10 @@ const ReviewFilePage = () => {
     }
   };
 
-  // Function to handle file preview using the public minio_path URL
+  // Function to handle file preview - now toggles visibility
   const handlePreview = () => {
      if (!fileToReview) return;
-    setPreviewing(true);
-     const loadingToastId = showLoading(`Preparando preview de ${fileToReview.name}...`);
-
-    try {
-      console.log(`Attempting to preview file from public URL: ${fileToReview.minio_path}`);
-      // Use the public URL directly for preview (opens in new tab)
-      window.open(fileToReview.minio_path, '_blank');
-      showSuccess(`Preview aberto para ${fileToReview.name}!`);
-
-    } catch (error) {
-      console.error("Preview failed:", error);
-      showError(`Falha ao abrir preview de ${fileToReview.name}.`);
-    } finally {
-      dismissToast(loadingToastId);
-      setPreviewing(false);
-    }
+     setShowPreview(!showPreview); // Toggle preview visibility
   };
 
   // Function to handle confirmation
@@ -138,9 +124,9 @@ const ReviewFilePage = () => {
   const isPageLoading = isLoadingFile || isProcessingReview;
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
+    <div className="container mx-auto p-4 max-w-4xl"> {/* Increased max-width for better preview */}
       <h1 className="text-3xl font-bold text-center mb-4">Podemos mandar esse arquivo para o cliente?</h1>
-      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Arquivo: {fileId}</h2>
+      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Arquivo: {fileToReview?.name || fileId}</h2> {/* Show file name if loaded */}
 
 
       {isLoadingFile ? (
@@ -160,25 +146,50 @@ const ReviewFilePage = () => {
                  <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">Criado em: {new Date(fileToReview.created_at).toLocaleDateString()}</CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Placeholder for file preview - implementation depends on file type */}
-                {/* If minio_path is a direct public URL, you could potentially embed images/PDFs here */}
-                <div className="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 rounded-md">
-                  Área de Preview (Implementação específica por tipo de arquivo necessária se não for apenas abrir em nova aba)
-                </div>
+                {/* Area de Preview */}
+                {showPreview && fileToReview.minio_path ? (
+                    // Render iframe if showPreview is true and minio_path exists
+                    <div className="w-full h-[600px] border rounded-md overflow-hidden"> {/* Added height and border */}
+                        <iframe
+                            src={fileToReview.minio_path}
+                            title={`Preview de ${fileToReview.name}`}
+                            className="w-full h-full"
+                            style={{ border: 'none' }} // Remove default iframe border
+                        >
+                            Seu navegador não suporta iframes. Você pode baixar o arquivo para visualizá-lo.
+                        </iframe>
+                    </div>
+                ) : (
+                    // Show placeholder when preview is not active
+                    <div className="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 rounded-md">
+                      Clique em "Mostrar Preview" para visualizar o arquivo.
+                    </div>
+                )}
               </CardContent>
               <CardFooter className="flex justify-end space-x-2">
+                 {/* Preview Button - Toggles visibility */}
                 <Button
                   variant="outline"
                   onClick={handlePreview}
-                  disabled={previewing || isPageLoading}
+                  disabled={isPageLoading} // Disable if page is loading or processing review
                 >
-                  {previewing ? "Carregando..." : "Preview"}
+                   {showPreview ? (
+                       <>
+                           <EyeOff className="mr-2 h-4 w-4" /> Esconder Preview
+                       </>
+                   ) : (
+                       <>
+                           <Eye className="mr-2 h-4 w-4" /> Mostrar Preview
+                       </>
+                   )}
                 </Button>
+                {/* Download Button */}
                 <Button
                   onClick={handleDownload}
                   disabled={downloading || isPageLoading}
                 >
-                   {downloading ? "Carregando..." : "Download"}
+                   <Download className="mr-2 h-4 w-4" />
+                   {downloading ? "Baixando..." : "Download"}
                 </Button>
               </CardFooter>
             </Card>

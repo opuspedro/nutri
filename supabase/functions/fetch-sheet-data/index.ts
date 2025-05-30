@@ -60,9 +60,8 @@ serve(async (req) => {
     const SHEET_ID = '1dsThViSXz2fuwew9APMDWafH119crauiPVHCAIX64k4';
     // YOUR sheet name and range (e.g., 'Sheet1!A1:Z300')
     // Reading up to 300 rows, columns A to Z
-    // UPDATED SHEET NAME - ENSURING QUOTES FOR NAMES WITH SPACES
-    // *** TESTING WITH SMALLER RANGE ***
-    const SHEET_RANGE = "'leads hotmart'!A1:C10"; // Testing with a smaller range
+    // UPDATED SHEET NAME - REMOVING SINGLE QUOTES
+    const SHEET_RANGE = "leads hotmart!A1:C10"; // Removed single quotes
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1; // Still using Column B for file name search
 

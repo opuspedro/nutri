@@ -60,10 +60,11 @@ serve(async (req) => {
     const SHEET_ID = '1dsThViSXz2fuwew9APMDWafH119crauiPVHCAIX64k4';
     // YOUR sheet name and range (e.g., 'Sheet1!A1:Z300')
     // Reading up to 300 rows, columns A to Z
-    // UPDATED SHEET NAME - REMOVING EXPLICIT QUOTES
-    const SHEET_RANGE = 'leads hotmart!A1:Z300';
+    // UPDATED SHEET NAME - ENSURING QUOTES FOR NAMES WITH SPACES
+    // *** TESTING WITH SMALLER RANGE ***
+    const SHEET_RANGE = "'leads hotmart'!A1:C10"; // Testing with a smaller range
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
-    const FILE_NAME_COLUMN_INDEX = 1;
+    const FILE_NAME_COLUMN_INDEX = 1; // Still using Column B for file name search
 
     console.log(`Sheet ID: ${SHEET_ID}, Range: ${SHEET_RANGE}, File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
 
@@ -77,6 +78,7 @@ serve(async (req) => {
     }
 
     // Construct the Google Sheets API URL
+    // The authClient.request method handles URL encoding
     const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_RANGE}`;
     console.log(`Fetching data from Google Sheets API URL: ${sheetsApiUrl}`);
 
@@ -95,6 +97,7 @@ serve(async (req) => {
             console.error("Could not read Google API error response body:", e);
         }
 
+        // Return the status code received from Google API
         return new Response(JSON.stringify({ error: `Failed to fetch sheet data from Google API: Status ${sheetsResponse.status}` }), {
             status: sheetsResponse.status,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -104,6 +107,9 @@ serve(async (req) => {
     const sheetData = sheetsResponse.data; // Assuming authClient.request puts the parsed JSON body here
     const sheetValues = sheetData?.values; // Assuming the response structure has a 'values' property
     console.log(`Fetched ${sheetValues ? sheetValues.length : 0} rows from sheet.`);
+    // Log the fetched values for debugging
+    console.log("Fetched sheet values (first 5 rows):", sheetValues ? sheetValues.slice(0, 5) : "No values");
+
 
     if (!sheetValues || sheetValues.length === 0) {
         console.log("No data found in the specified sheet range.");

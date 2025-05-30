@@ -69,14 +69,14 @@ serve(async (req) => {
 
 
     // --- Configuration ---
-    // YOUR Google Sheet ID - CORRECTED
+    // YOUR Google Sheet ID
     const SHEET_ID = '1FbU8pwSJ4Avzaq9KXxpWS5zgkBdwiqkHMWDFry8kdPA';
-    // YOUR sheet name - TESTING 'Página1'
+    // YOUR sheet name
     const SHEET_NAME = "Página1";
-    // YOUR range (e.g., 'A1:Z300')
-    const SHEET_RANGE_PART = "A1:A1"; // Keeping A1:A1 for this test
+    // YOUR range (e.g., 'A1:Z300') - Updated to include B and H:BA
+    const SHEET_RANGE_PART = "B1:BA300";
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
-    const FILE_NAME_COLUMN_INDEX = 1; // Still using Column B for file name search
+    const FILE_NAME_COLUMN_INDEX = 0; // Corrected index to 0 because the range starts at B
 
     console.log(`Sheet ID: ${SHEET_ID}, Sheet Name: "${SHEET_NAME}", Range Part: "${SHEET_RANGE_PART}", File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
 
@@ -147,6 +147,7 @@ serve(async (req) => {
     // Find the row matching the file name
     const foundRow = dataRows.find(row =>
         // Ensure the row and the target column exist before accessing
+        // FILE_NAME_COLUMN_INDEX is now 0 because the range starts at B
         row && row.length > FILE_NAME_COLUMN_INDEX &&
         row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === fileName.trim()
     );

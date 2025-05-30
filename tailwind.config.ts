@@ -63,11 +63,6 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // Add gradient colors to Tailwind config
-        'gradient-start-light': 'hsl(var(--gradient-start-light))',
-        'gradient-end-light': 'hsl(var(--gradient-end-light))',
-        'gradient-start-dark': 'hsl(var(--gradient-start-dark))',
-        'gradient-end-dark': 'hsl(var(--gradient-end-dark))',
       },
       borderRadius: {
         lg: "var(--radius)",

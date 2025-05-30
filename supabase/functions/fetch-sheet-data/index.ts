@@ -55,17 +55,30 @@ serve(async (req) => {
     const authClient = await auth.getClient();
     console.log("Google Auth client obtained.");
 
+    // Get the access token
+    const accessToken = await authClient.getAccessToken();
+    console.log(`Access token obtained: ${accessToken ? 'Yes' : 'No'}`);
+
+    if (!accessToken || !accessToken.token) {
+         console.error("Failed to obtain Google Access Token.");
+         return new Response(JSON.stringify({ error: 'Server authentication error: Could not obtain Google Access Token.' }), {
+           status: 500,
+           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+         });
+    }
+
+
     // --- Configuration ---
     // YOUR Google Sheet ID
     const SHEET_ID = '1dsThViSXz2fuwew9APMDWafH119crauiPVHCAIX64k4';
-    // YOUR sheet name and range (e.g., 'Sheet1!A1:Z300')
-    // Reading up to 300 rows, columns A to Z
-    // UPDATED SHEET NAME - REMOVING SINGLE QUOTES ENTIRELY
-    const SHEET_RANGE = "leads hotmart!A1:C10"; // Removed single quotes
+    // YOUR sheet name
+    const SHEET_NAME = "leads hotmart";
+    // YOUR range (e.g., 'A1:Z300')
+    const SHEET_RANGE_PART = "A1:C10";
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1; // Still using Column B for file name search
 
-    console.log(`Sheet ID: ${SHEET_ID}, Range: ${SHEET_RANGE}, File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
+    console.log(`Sheet ID: ${SHEET_ID}, Sheet Name: "${SHEET_NAME}", Range Part: "${SHEET_RANGE_PART}", File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
 
     // Simplified configuration check
     if (SHEET_ID === 'YOUR_SHEET_ID' || FILE_NAME_COLUMN_INDEX < 0) {
@@ -76,37 +89,42 @@ serve(async (req) => {
          });
     }
 
-    // Construct the Google Sheets API URL
-    // The authClient.request method handles URL encoding
-    const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_RANGE}`;
+    // Manually construct the full range string with single quotes as per Google API docs
+    const fullRangeString = `'${SHEET_NAME}'!${SHEET_RANGE_PART}`;
+    // Encode the entire range string using encodeURIComponent
+    const encodedFullRange = encodeURIComponent(fullRangeString);
+
+    // Construct the Google Sheets API URL using the manually encoded range
+    const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodedFullRange}`;
     console.log(`Fetching data from Google Sheets API URL: ${sheetsApiUrl}`);
 
-    // Make the request using the authenticated client
-    const sheetsResponse = await authClient.request({ url: sheetsApiUrl });
+    // Make the request using Deno's native fetch
+    const sheetsResponse = await fetch(sheetsApiUrl, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken.token}`, // Use the obtained access token
+            'Accept': 'application/json' // Explicitly request JSON
+        }
+    });
+
     console.log(`Google Sheets API response status: ${sheetsResponse.status}`);
 
-
-    if (sheetsResponse.status !== 200) {
+    // Check for non-2xx status codes
+    if (!sheetsResponse.ok) {
+        const errorBody = await sheetsResponse.text(); // Read response body as text for more details
         console.error("Error fetching sheet data from Google API:", sheetsResponse.status, sheetsResponse.statusText);
-        // Attempt to read response body for more details if available
-        try {
-            const errorBody = sheetsResponse.data; // authClient.request might put body in .data
-            console.error("Google API Error Body:", errorBody);
-        } catch (e) {
-            console.error("Could not read Google API error response body:", e);
-        }
+        console.error("Google API Error Body:", errorBody);
 
         // Return the status code received from Google API
-        return new Response(JSON.stringify({ error: `Failed to fetch sheet data from Google API: Status ${sheetsResponse.status}` }), {
+        return new Response(JSON.stringify({ error: `Failed to fetch sheet data from Google API: Status ${sheetsResponse.status}`, details: errorBody }), {
             status: sheetsResponse.status,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
 
-    const sheetData = sheetsResponse.data; // Assuming authClient.request puts the parsed JSON body here
-    const sheetValues = sheetData?.values; // Assuming the response structure has a 'values' property
+    const sheetData = await sheetsResponse.json(); // Parse response body as JSON
+    const sheetValues = sheetData?.values;
     console.log(`Fetched ${sheetValues ? sheetValues.length : 0} rows from sheet.`);
-    // Log the fetched values for debugging
     console.log("Fetched sheet values (first 5 rows):", sheetValues ? sheetValues.slice(0, 5) : "No values");
 
 
@@ -146,6 +164,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error in Edge Function:", error);
+    // Catch any other errors during execution
     return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

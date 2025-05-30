@@ -7,6 +7,7 @@ import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast
 import { markFileAsReviewed, getFileById } from "@/state/reviewState"; // Import file-based functions
 import { Download, Eye, EyeOff } from "lucide-react"; // Import icons, including EyeOff
 import { supabase } from "@/integrations/supabase/client"; // Import Supabase client
+import { cleanFileName } from "@/lib/utils"; // Import the utility function
 
 // Define the type for a single file
 interface ReviewFile {
@@ -179,11 +180,20 @@ const ReviewFilePage = () => {
 
   // Define the starting column index for displaying data (H is index 7)
   const START_COLUMN_INDEX = 7;
+  // Define the column index for the person's name (C is index 1 in the B:BA range)
+  const PERSON_NAME_COLUMN_INDEX = 1;
+
 
   return (
     <div className="container mx-auto p-4 max-w-4xl min-h-screen flex flex-col items-center bg-gradient-to-br from-blue-100 to-blue-300 dark:from-blue-900 dark:to-blue-700 text-gray-900 dark:text-gray-100"> {/* Added gradient classes */}
-      <h1 className="text-3xl font-bold text-center mb-4">Podemos mandar esse arquivo para o cliente?</h1>
-      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Arquivo: {fileToReview?.name || fileId}</h2> {/* Show file name if loaded */}
+      {/* Main title: Person's Name */}
+      <h1 className="text-3xl font-bold text-center mb-4">
+        {isLoadingSheetData ? "Carregando nome..." : sheetData?.row?.[PERSON_NAME_COLUMN_INDEX] || "Nome Desconhecido"}
+      </h1>
+      {/* Secondary title: Cleaned File Name */}
+      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">
+        Arquivo: {fileToReview ? cleanFileName(fileToReview.name) : fileId}
+      </h2>
 
 
       {isLoadingFile ? (
@@ -198,8 +208,9 @@ const ReviewFilePage = () => {
          <div className="space-y-6 mb-8 w-full"> {/* Added w-full for better centering */}
             <Card key={fileToReview.id}>
               <CardHeader>
-                <CardTitle>{fileToReview.name}</CardTitle>
-                {/* Removed: CardDescription for MinIO path */}
+                {/* Card Title: Cleaned File Name (redundant with h2, but keeping for card structure) */}
+                {/* Let's make this the file ID or something else if the cleaned name is in h2 */}
+                 <CardTitle className="text-lg font-medium truncate">ID do Arquivo: {fileToReview.id}</CardTitle>
                  <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">Criado em: {new Date(fileToReview.created_at).toLocaleDateString()}</CardDescription>
               </CardHeader>
               <CardContent>

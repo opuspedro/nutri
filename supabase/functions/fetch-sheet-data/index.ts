@@ -60,23 +60,17 @@ serve(async (req) => {
     const SHEET_ID = '1dsThViSXz2fuwew9APMDWafH119crauiPVHCAIX64k4';
     // YOUR sheet name and range (e.g., 'Sheet1!A1:Z300')
     // Reading up to 300 rows, columns A to Z
-    // UPDATED SHEET NAME
-    const SHEET_RANGE = 'leads hotmart!A1:Z300';
+    // UPDATED SHEET NAME - ENSURING QUOTES FOR NAMES WITH SPACES
+    const SHEET_RANGE = "'leads hotmart'!A1:Z300";
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1;
 
     console.log(`Sheet ID: ${SHEET_ID}, Range: ${SHEET_RANGE}, File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
 
-    if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_RANGE === 'Sheet1!A:Z') {
-         console.error("Google Sheet ID or Range not configured in Edge Function.");
-         return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set.' }), {
-           status: 500,
-           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-         });
-    }
-     if (FILE_NAME_COLUMN_INDEX < 0) {
-         console.error("File name column index not configured correctly.");
-         return new Response(JSON.stringify({ error: 'Server configuration error: File name column index not set.' }), {
+    // Simplified configuration check
+    if (SHEET_ID === 'YOUR_SHEET_ID' || FILE_NAME_COLUMN_INDEX < 0) {
+         console.error("Google Sheet configuration is incomplete or incorrect in Edge Function.");
+         return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set correctly.' }), {
            status: 500,
            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
          });
@@ -101,6 +95,7 @@ serve(async (req) => {
             console.error("Could not read Google API error response body:", e);
         }
 
+        // Return the status code received from Google API
         return new Response(JSON.stringify({ error: `Failed to fetch sheet data from Google API: Status ${sheetsResponse.status}` }), {
             status: sheetsResponse.status,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

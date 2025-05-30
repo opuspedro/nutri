@@ -69,12 +69,12 @@ serve(async (req) => {
 
 
     // --- Configuration ---
-    // YOUR Google Sheet ID
-    const SHEET_ID = '1dsThViSXz2fuwew9APMDWafH119crauiPVHCAIX64k4';
-    // YOUR sheet name
-    const SHEET_NAME = "leads hotmart";
+    // YOUR Google Sheet ID - CORRECTED
+    const SHEET_ID = '1FbU8pwSJ4Avzaq9KXxpWS5zgkBdwiqkHMWDFry8kdPA';
+    // YOUR sheet name - TESTING 'Página1'
+    const SHEET_NAME = "Página1";
     // YOUR range (e.g., 'A1:Z300')
-    const SHEET_RANGE_PART = "A1:A1"; // Changed range to A1:A1 for testing
+    const SHEET_RANGE_PART = "A1:A1"; // Keeping A1:A1 for this test
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1; // Still using Column B for file name search
 

@@ -58,14 +58,14 @@ serve(async (req) => {
     // --- Configuration ---
     // YOUR Google Sheet ID
     const SHEET_ID = '1dsThViSXz2fuwew9APMDWafH119crauiPVHCAIX64k4';
-    // YOUR sheet name
-    const SHEET_NAME = "leads hotmart"; // Sheet name without quotes
-    // YOUR range (e.g., 'A1:Z300')
-    const SHEET_RANGE_PART = "A1:C10"; // Range part
+    // YOUR sheet name and range (e.g., 'Sheet1!A1:Z300')
+    // Reading up to 300 rows, columns A to Z
+    // UPDATED SHEET NAME - REMOVING SINGLE QUOTES ENTIRELY
+    const SHEET_RANGE = "leads hotmart!A1:C10"; // Removed single quotes
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1; // Still using Column B for file name search
 
-    console.log(`Sheet ID: ${SHEET_ID}, Sheet Name: "${SHEET_NAME}", Range Part: "${SHEET_RANGE_PART}", File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
+    console.log(`Sheet ID: ${SHEET_ID}, Range: ${SHEET_RANGE}, File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
 
     // Simplified configuration check
     if (SHEET_ID === 'YOUR_SHEET_ID' || FILE_NAME_COLUMN_INDEX < 0) {
@@ -76,17 +76,12 @@ serve(async (req) => {
          });
     }
 
-    // Manually construct the range string with quotes and encode it
-    // The API expects 'Sheet Name'!Range for names with spaces
-    const encodedSheetName = encodeURIComponent(`'${SHEET_NAME}'`);
-    const fullEncodedRange = `${encodedSheetName}!${SHEET_RANGE_PART}`;
-
-    // Construct the Google Sheets API URL using the manually encoded range
-    const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${fullEncodedRange}`;
+    // Construct the Google Sheets API URL
+    // The authClient.request method handles URL encoding
+    const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_RANGE}`;
     console.log(`Fetching data from Google Sheets API URL: ${sheetsApiUrl}`);
 
     // Make the request using the authenticated client
-    // Pass the full URL directly
     const sheetsResponse = await authClient.request({ url: sheetsApiUrl });
     console.log(`Google Sheets API response status: ${sheetsResponse.status}`);
 

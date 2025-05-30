@@ -185,7 +185,7 @@ const ReviewFilePage = () => {
 
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl min-h-screen flex flex-col items-center text-gray-900 dark:text-gray-100"> {/* Removed gradient classes */}
+    <div className="container mx-auto p-4 max-w-4xl min-h-screen flex flex-col items-center bg-gradient-to-br from-blue-100 to-blue-300 dark:from-blue-900 dark:to-blue-700 text-gray-900 dark:text-gray-100">
       {/* Main title: Person's Name */}
       <h1 className="text-3xl font-bold text-center mb-4">
         {isLoadingSheetData ? "Carregando nome..." : sheetData?.row?.[PERSON_NAME_COLUMN_INDEX] || "Nome Desconhecido"}
@@ -205,13 +205,30 @@ const ReviewFilePage = () => {
           Arquivo não encontrado.
         </div>
       ) : (
-         <div className="space-y-6 mb-8 w-full"> {/* Added w-full for better centering */}
+         <div className="space-y-6 mb-8 w-full">
             <Card key={fileToReview.id}>
-              <CardHeader>
-                {/* Card Title: Cleaned File Name (redundant with h2, but keeping for card structure) */}
-                {/* Let's make this the file ID or something else if the cleaned name is in h2 */}
-                 <CardTitle className="text-lg font-medium truncate">ID do Arquivo: {fileToReview.id}</CardTitle>
-                 <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">Criado em: {new Date(fileToReview.created_at).toLocaleDateString()}</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"> {/* Added flex layout */}
+                <div> {/* Container for title and description */}
+                    <CardTitle className="text-lg font-medium truncate">ID do Arquivo: {fileToReview.id}</CardTitle>
+                    <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">Criado em: {new Date(fileToReview.created_at).toLocaleDateString()}</CardDescription>
+                </div>
+                 {/* Preview Button - Moved here */}
+                <Button
+                  variant="outline"
+                  onClick={handlePreview}
+                  disabled={isPageLoading} // Disable if page is loading or processing review
+                  size="sm" // Make button smaller to fit header
+                >
+                   {showPreview ? (
+                       <>
+                           <EyeOff className="mr-2 h-4 w-4" /> Esconder Preview
+                       </>
+                   ) : (
+                       <>
+                           <Eye className="mr-2 h-4 w-4" /> Mostrar Preview
+                       </>
+                   )}
+                </Button>
               </CardHeader>
               <CardContent>
                 {/* Area de Preview do Arquivo */}
@@ -278,22 +295,6 @@ const ReviewFilePage = () => {
 
               </CardContent>
               <CardFooter className="flex justify-end space-x-2">
-                 {/* Preview Button - Toggles visibility */}
-                <Button
-                  variant="outline"
-                  onClick={handlePreview}
-                  disabled={isPageLoading} // Disable if page is loading or processing review
-                >
-                   {showPreview ? (
-                       <>
-                           <EyeOff className="mr-2 h-4 w-4" /> Esconder Preview
-                       </>
-                   ) : (
-                       <>
-                           <Eye className="mr-2 h-4 w-4" /> Mostrar Preview
-                       </>
-                   )}
-                </Button>
                 {/* Download Button */}
                 <Button
                   onClick={handleDownload}

@@ -60,8 +60,8 @@ serve(async (req) => {
     const SHEET_ID = '1dsThViSXz2fuwew9APMDWafH119crauiPVHCAIX64k4';
     // YOUR sheet name and range (e.g., 'Sheet1!A1:Z300')
     // Reading up to 300 rows, columns A to Z
-    // UPDATED SHEET NAME - ENSURING QUOTES FOR NAMES WITH SPACES
-    const SHEET_RANGE = "'leads hotmart'!A1:Z300";
+    // UPDATED SHEET NAME - REMOVING EXPLICIT QUOTES
+    const SHEET_RANGE = 'leads hotmart!A1:Z300';
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1;
 
@@ -95,7 +95,6 @@ serve(async (req) => {
             console.error("Could not read Google API error response body:", e);
         }
 
-        // Return the status code received from Google API
         return new Response(JSON.stringify({ error: `Failed to fetch sheet data from Google API: Status ${sheetsResponse.status}` }), {
             status: sheetsResponse.status,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

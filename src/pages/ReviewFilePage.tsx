@@ -181,7 +181,7 @@ const ReviewFilePage = () => {
   const START_COLUMN_INDEX = 7;
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl"> {/* Increased max-width for better preview */}
+    <div className="container mx-auto p-4 max-w-4xl min-h-screen flex flex-col items-center bg-gradient-to-br from-blue-100 to-blue-300 dark:from-blue-900 dark:to-blue-700 text-gray-900 dark:text-gray-100"> {/* Added gradient classes */}
       <h1 className="text-3xl font-bold text-center mb-4">Podemos mandar esse arquivo para o cliente?</h1>
       <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">Arquivo: {fileToReview?.name || fileId}</h2> {/* Show file name if loaded */}
 
@@ -195,7 +195,7 @@ const ReviewFilePage = () => {
           Arquivo não encontrado.
         </div>
       ) : (
-         <div className="space-y-6 mb-8">
+         <div className="space-y-6 mb-8 w-full"> {/* Added w-full for better centering */}
             <Card key={fileToReview.id}>
               <CardHeader>
                 <CardTitle>{fileToReview.name}</CardTitle>

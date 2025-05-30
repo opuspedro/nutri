@@ -42,7 +42,7 @@ const HistoryPage = () => {
   }, []); // Empty dependency array means this runs once on mount
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4">
+    <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-blue-100 to-blue-300 dark:from-blue-900 dark:to-blue-700 text-gray-900 dark:text-gray-100 p-4"> {/* Added gradient classes */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold">Histórico de Revisões de Arquivos</h1>
         <p className="text-xl text-gray-600 dark:text-gray-400 mt-2">
@@ -73,7 +73,7 @@ const HistoryPage = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-gray-500 dark:text-gray-400 text-sm">Arquivo ID: {review.file_id}</p>
-                 <p className="text-gray-500 dark:text-gray-400 text-sm truncate">Caminho: {review.files?.minio_path || 'Caminho Desconhecido'}</p>
+                 {/* Removed: Display the path as text */}
                 <p className="text-gray-500 dark:text-gray-400 text-sm">Data Revisão: {new Date(review.reviewed_at).toLocaleDateString()}</p>
               </CardContent>
             </Card>

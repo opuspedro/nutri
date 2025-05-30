@@ -91,8 +91,12 @@ serve(async (req) => {
 
     // Manually construct the full range string with single quotes as per Google API docs
     const fullRangeString = `'${SHEET_NAME}'!${SHEET_RANGE_PART}`;
+    console.log(`Range string BEFORE encoding: "${fullRangeString}"`); // Log before encoding
+
     // Encode the entire range string using encodeURIComponent
     const encodedFullRange = encodeURIComponent(fullRangeString);
+    console.log(`Range string AFTER encoding: "${encodedFullRange}"`); // Log after encoding
+
 
     // Construct the Google Sheets API URL using the manually encoded range
     const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodedFullRange}`;

@@ -74,7 +74,7 @@ serve(async (req) => {
     // YOUR sheet name
     const SHEET_NAME = "leads hotmart";
     // YOUR range (e.g., 'A1:Z300')
-    const SHEET_RANGE_PART = "H1:BA300"; // Changed range to H1:BA300
+    const SHEET_RANGE_PART = "H1:BA"; // Changed range to H1:BA to read all rows
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
     const FILE_NAME_COLUMN_INDEX = 1; // Still using Column B for file name search
 

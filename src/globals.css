@@ -89,6 +89,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    /* Apply gradient to the body */
+    @apply min-h-screen bg-gradient-to-br from-blue-100 to-blue-300 dark:from-blue-900 dark:to-blue-700 text-foreground;
   }
 }

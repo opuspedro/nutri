@@ -185,7 +185,7 @@ const ReviewFilePage = () => {
 
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl min-h-screen flex flex-col items-center bg-gradient-to-br from-blue-100 to-blue-300 dark:from-blue-900 dark:to-blue-700 text-gray-900 dark:text-gray-100"> {/* Added gradient classes */}
+    <div className="container mx-auto p-4 max-w-4xl min-h-screen flex flex-col items-center text-gray-900 dark:text-gray-100"> {/* Removed gradient classes */}
       {/* Main title: Person's Name */}
       <h1 className="text-3xl font-bold text-center mb-4">
         {isLoadingSheetData ? "Carregando nome..." : sheetData?.row?.[PERSON_NAME_COLUMN_INDEX] || "Nome Desconhecido"}

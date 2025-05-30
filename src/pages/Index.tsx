@@ -99,8 +99,7 @@ const Index = () => {
                   <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">ID: {file.id}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                   {/* Display the path as text */}
-                   <p className="text-sm text-gray-700 dark:text-gray-300 truncate">Caminho: {file.minio_path}</p>
+                   {/* Removed: Display the path as text */}
                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Criado em: {new Date(file.created_at).toLocaleDateString()}</p>
                 </CardContent>
                 <CardFooter className="flex justify-between items-center">

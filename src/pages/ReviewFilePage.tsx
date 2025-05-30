@@ -199,7 +199,7 @@ const ReviewFilePage = () => {
             <Card key={fileToReview.id}>
               <CardHeader>
                 <CardTitle>{fileToReview.name}</CardTitle>
-                <CardDescription>Caminho no MinIO: {fileToReview.minio_path}</CardDescription>
+                {/* Removed: CardDescription for MinIO path */}
                  <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">Criado em: {new Date(fileToReview.created_at).toLocaleDateString()}</CardDescription>
               </CardHeader>
               <CardContent>

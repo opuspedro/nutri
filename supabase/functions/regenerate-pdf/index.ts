@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+// Import the official Google Auth library using npm: prefix
+import { GoogleAuth } from 'npm:google-auth-library@9.11.0'; // Use npm: prefix
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,10 +63,101 @@ serve(async (req) => {
 
     console.log("File details fetched:", fileData);
 
+    // --- Fetch Google Sheet Data ---
+    console.log(`Attempting to fetch sheet data for fileName: ${fileData.name}`);
+
+    const credentialsJson = Deno.env.get('GOOGLE_SHEETS_CREDENTIALS_JSON');
+    const SHEET_ID = Deno.env.get('SHEET_ID'); // Read from secret
+    const SHEET_NAME = Deno.env.get('SHEET_NAME'); // Read from secret
+    const SHEET_RANGE_PART = Deno.env.get('SHEET_RANGE_PART'); // Read from secret
+    const FILE_NAME_COLUMN_INDEX_STR = Deno.env.get('FILE_NAME_COLUMN_INDEX'); // Read from secret
+
+    if (!credentialsJson || !SHEET_ID || !SHEET_NAME || !SHEET_RANGE_PART || !FILE_NAME_COLUMN_INDEX_STR) {
+       console.error("Google Sheet configuration secrets not set.");
+       return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details missing secrets.' }), {
+         status: 500,
+         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+       });
+    }
+
+    const FILE_NAME_COLUMN_INDEX = parseInt(FILE_NAME_COLUMN_INDEX_STR, 10);
+    if (isNaN(FILE_NAME_COLUMN_INDEX) || FILE_NAME_COLUMN_INDEX < 0) {
+        console.error("FILE_NAME_COLUMN_INDEX secret is not a valid non-negative number.");
+        return new Response(JSON.stringify({ error: 'Server configuration error: Invalid FILE_NAME_COLUMN_INDEX secret.' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+
+
+    const credentials = JSON.parse(credentialsJson);
+    const auth = new GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
+    const authClient = await auth.getClient();
+    const accessToken = await authClient.getAccessToken();
+
+    if (!accessToken || !accessToken.token) {
+         console.error("Failed to obtain Google Access Token.");
+         return new Response(JSON.stringify({ error: 'Server authentication error: Could not obtain Google Access Token.' }), {
+           status: 500,
+           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+         });
+    }
+
+    const fullRangeString = `'${SHEET_NAME}'!${SHEET_RANGE_PART}`;
+    const encodedFullRange = encodeURIComponent(fullRangeString);
+    const sheetsApiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodedFullRange}`;
+
+    const sheetsResponse = await fetch(sheetsApiUrl, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken.token}`,
+            'Accept': 'application/json'
+        }
+    });
+
+    if (!sheetsResponse.ok) {
+        const errorBody = await sheetsResponse.text();
+        console.error("Error fetching sheet data from Google API:", sheetsResponse.status, sheetsResponse.statusText);
+        console.error("Google API Error Body:", errorBody);
+        // Decide if you want to fail the regeneration request if sheet data fetch fails
+        // For now, we'll return an error, but you could potentially proceed without sheet data
+         return new Response(JSON.stringify({ error: `Failed to fetch sheet data from Google API: Status ${sheetsResponse.status}`, details: errorBody }), {
+             status: 500, // Or sheetsResponse.status
+             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+         });
+    }
+
+    const sheetData = await sheetsResponse.json();
+    const sheetValues = sheetData?.values;
+
+    let foundSheetRowData = null;
+    let sheetHeader = null;
+
+    if (sheetValues && sheetValues.length > 0) {
+        sheetHeader = sheetValues[0]; // First row is header
+        const dataRows = sheetValues.slice(1); // Rest are data rows
+
+        // Find the row matching the file name
+        const foundRow = dataRows.find(row =>
+            row && row.length > FILE_NAME_COLUMN_INDEX &&
+            row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === fileData.name.trim()
+        );
+
+        if (foundRow) {
+            foundSheetRowData = { header: sheetHeader, row: foundRow };
+            console.log(`Found sheet data for file "${fileData.name}".`);
+        } else {
+            console.log(`No sheet data found for file "${fileData.name}".`);
+        }
+    } else {
+        console.log("No data found in the specified sheet range.");
+    }
+
+
     // --- Call your n8n webhook ---
-    // You need to replace 'YOUR_N8N_WEBHOOK_URL' with the actual URL of your n8n webhook.
-    // You might want to store this URL as a Supabase Secret named 'N8N_REGENERATE_PDF_WEBHOOK_URL'
-    // and access it using Deno.env.get('N8N_REGENERATE_PDF_WEBHOOK_URL').
     const n8nWebhookUrl = Deno.env.get('N8N_REGENERATE_PDF_WEBHOOK_URL') || 'YOUR_N8N_WEBHOOK_URL'; // Replace or use secret
 
     if (n8nWebhookUrl === 'YOUR_N8N_WEBHOOK_URL') {
@@ -88,6 +181,7 @@ serve(async (req) => {
             fileId: fileData.id,
             fileName: fileData.name,
             minioPath: fileData.minio_path,
+            sheetData: foundSheetRowData, // <-- Including the fetched sheet data here
             // Add any other data your n8n workflow needs
         }),
     });

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast";
 import { markFileAsReviewed, getFileById } from "@/state/reviewState"; // Import file-based functions
-import { Download, Eye, EyeOff } from "lucide-react"; // Import icons, including EyeOff
+import { Download, Eye, EyeOff, RefreshCw } from "lucide-react"; // Import icons, including RefreshCw
 import { supabase } from "@/integrations/supabase/client"; // Import Supabase client
 import { cleanFileName } from "@/lib/utils"; // Import the utility function
 
@@ -36,6 +36,7 @@ const ReviewFilePage = () => {
   const [showPreview, setShowPreview] = useState(false); // State to control preview visibility
   const [confirming, setConfirming] = useState(false);
   const [denying, setDenying] = useState(false);
+  const [regenerating, setRegenerating] = useState(false); // State for PDF regeneration
 
   // Function to fetch file details
   const fetchFile = async (id: string) => {
@@ -135,6 +136,38 @@ const ReviewFilePage = () => {
      setShowPreview(!showPreview); // Toggle preview visibility
   };
 
+  // Function to handle PDF regeneration
+  const handleRegeneratePdf = async () => {
+      if (!fileId) return;
+      setRegenerating(true);
+      const loadingToastId = showLoading("Solicitando regeneração do PDF...");
+
+      try {
+          // Call the new Edge Function
+          const { data, error } = await supabase.functions.invoke('regenerate-pdf', {
+              body: { fileId: fileId },
+          });
+
+          if (error) {
+              console.error("Error invoking regenerate-pdf Edge Function:", error);
+              showError(`Falha ao solicitar regeneração do PDF: ${error.message}`);
+          } else {
+              console.log("Regenerate PDF Edge Function response:", data);
+              // Assuming the Edge Function returns a success message or status
+              showSuccess("Solicitação de regeneração do PDF enviada com sucesso!");
+              // Optionally, you might want to refetch file details or show a message
+              // indicating the process might take time.
+          }
+      } catch (error: any) {
+          console.error("Failed to call regenerate-pdf Edge Function:", error);
+          showError(error.message || "Falha ao solicitar regeneração do PDF.");
+      } finally {
+          dismissToast(loadingToastId);
+          setRegenerating(false);
+      }
+  };
+
+
   // Function to handle confirmation
   const handleConfirm = async () => {
     if (!fileId) return;
@@ -175,7 +208,7 @@ const ReviewFilePage = () => {
     }
   };
 
-  const isProcessingReview = confirming || denying;
+  const isProcessingReview = confirming || denying || regenerating; // Include regenerating in processing state
   const isPageLoading = isLoadingFile || isLoadingSheetData || isProcessingReview;
 
   // Define the starting column index for displaying data (H is index 7)
@@ -294,15 +327,25 @@ const ReviewFilePage = () => {
 
 
               </CardContent>
-              <CardFooter className="flex justify-end space-x-2">
+              <CardFooter className="flex justify-between space-x-2"> {/* Changed to justify-between */}
                 {/* Download Button */}
                 <Button
                   onClick={handleDownload}
                   disabled={downloading || isPageLoading}
+                  variant="outline" // Use outline variant
                 >
                    <Download className="mr-2 h-4 w-4" />
                    {downloading ? "Baixando..." : "Download"}
                 </Button>
+                 {/* Regenerate PDF Button */}
+                 <Button
+                   onClick={handleRegeneratePdf}
+                   disabled={regenerating || isPageLoading}
+                   variant="secondary" // Use secondary variant
+                 >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    {regenerating ? "Refazendo..." : "Refazer PDF"}
+                 </Button>
               </CardFooter>
             </Card>
         </div>

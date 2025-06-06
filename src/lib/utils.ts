@@ -5,24 +5,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Function to remove '.txt' and then '@s.whatsapp.net' from file names
+// Function to remove '@s.whatsapp.net' and then '.txt' from file names (Reverted Logic)
 export function cleanFileName(fileName: string): string {
   if (!fileName) return "";
   let cleaned = fileName;
 
-  // Remove .txt extension if present (case-insensitive) - Do this first
-  const txtSuffix = ".txt";
-  if (cleaned.toLowerCase().endsWith(txtSuffix)) {
-      cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
-  }
-
-  // Remove WhatsApp suffix if present at the end - Do this second
+  // Remove WhatsApp suffix if present at the end - Do this first (Reverted Order)
   const whatsappSuffix = "@s.whatsapp.net";
   if (cleaned.endsWith(whatsappSuffix)) {
     cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
   }
 
-  console.log(`cleanFileName (Frontend - New Logic): Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
+  // Remove .txt extension if present (case-insensitive) - Do this second (Reverted Order)
+  const txtSuffix = ".txt";
+  if (cleaned.toLowerCase().endsWith(txtSuffix)) {
+      cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
+  }
+
+  console.log(`cleanFileName (Frontend - Reverted Logic): Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
 
   return cleaned;
 }

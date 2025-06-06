@@ -100,6 +100,10 @@ const Index = () => {
             const cleanedName = cleanFileName(file.name);
             console.log(`Index Page - Cleaned file name: "${cleanedName}"`);
 
+            // *** ADDING LOG DIRECTLY IN JSX RENDER ***
+            console.log(`Index Page - Value used in CardTitle: "${cleanedName}"`);
+            // *****************************************
+
             return (
               // Card itself is not a link anymore, actions are via buttons
                 <Card key={file.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">

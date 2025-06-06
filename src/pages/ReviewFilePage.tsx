@@ -226,9 +226,9 @@ const ReviewFilePage = () => {
       const loadingToastId = showLoading("Salvando conteúdo do arquivo...");
 
       try {
-          // Call the updated Edge Function
+          // Call the new Edge Function
           const { data, error } = await supabase.functions.invoke('save-file-content', { // Use the new function name
-              body: { fileId: fileId, newHtmlContent: fileContent }, // Pass fileId and newContent (renamed to newHtmlContent in EF)
+              body: { fileId: fileId, newContent: fileContent }, // Pass fileId and newContent
           });
 
           if (error) {

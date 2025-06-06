@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("Edge Function 'save-html-content' received request.");
+  console.log("Edge Function 'save-file-content' received request.");
 
   // Handle CORS OPTIONS request
   if (req.method === 'OPTIONS') {
@@ -17,26 +17,26 @@ serve(async (req) => {
 
   try {
     console.log("Attempting to parse request body...");
-    const { fileId, newHtmlContent } = await req.json();
+    const { fileId, newContent } = await req.json();
     console.log("Request body parsed successfully. fileId:", fileId);
-    // console.log("newHtmlContent (first 100 chars):", newHtmlContent ? newHtmlContent.substring(0, 100) : 'null'); // Log snippet
+    // console.log("newContent (first 100 chars):", newContent ? newContent.substring(0, 100) : 'null'); // Log snippet
 
-    if (!fileId || newHtmlContent === undefined || newHtmlContent === null) {
-      console.error('Missing fileId or newHtmlContent in request body');
-      return new Response(JSON.stringify({ error: 'Missing fileId or newHtmlContent in request body' }), {
+    if (!fileId || newContent === undefined || newContent === null) {
+      console.error('Missing fileId or newContent in request body');
+      return new Response(JSON.stringify({ error: 'Missing fileId or newContent in request body' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Initialize Supabase client with the service role key for Storage write access
+    // Initialize Supabase client with the service role key for backend operations
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '' // Use service role key
     );
     console.log("Supabase client initialized with service role key.");
 
-    // Fetch file details from Supabase to get the minio_path
+    // Fetch file details from Supabase to get the original name and minio_path
     console.log(`Fetching file details for fileId: ${fileId}`);
     const { data: fileData, error: fileError } = await supabase
       .from('files')
@@ -52,85 +52,67 @@ serve(async (req) => {
       });
     }
 
-    if (!fileData || !fileData.minio_path) {
-       console.error(`File with ID ${fileId} not found or missing minio_path.`);
-       return new Response(JSON.stringify({ error: `File with ID ${fileId} not found or missing minio_path.` }), {
+    if (!fileData) {
+       console.error(`File with ID ${fileId} not found.`);
+       return new Response(JSON.stringify({ error: `File with ID ${fileId} not found.` }), {
          status: 404,
          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
        });
     }
 
     console.log("File details fetched:", fileData);
-    console.log("minio_path:", fileData.minio_path);
 
-    // Parse the minio_path URL to get the bucket name and the path within the bucket
-    // Assuming the public URL format: https://[project-ref].supabase.co/storage/v1/object/public/[bucket-name]/[path/to/file]
-    try {
-        const url = new URL(fileData.minio_path);
-        const pathSegments = url.pathname.split('/').filter(segment => segment !== ''); // Split path and remove empty segments
-        // Expected segments: storage, v1, object, public, [bucket-name], [path/to/file parts...]
-        if (pathSegments.length < 5 || pathSegments[0] !== 'storage' || pathSegments[1] !== 'v1' || pathSegments[2] !== 'object' || pathSegments[3] !== 'public') {
-             console.error("Unexpected minio_path format:", fileData.minio_path);
-             return new Response(JSON.stringify({ error: 'Invalid minio_path format for storage operation.' }), {
-               status: 500,
-               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-             });
-        }
+    // --- Send content to Webhook ---
+    const webhookUrl = Deno.env.get('N8N_SAVE_CONTENT_WEBHOOK_URL') || 'YOUR_N8N_SAVE_CONTENT_WEBHOOK_URL'; // Read from secret
 
-        const bucketName = pathSegments[4]; // The segment after 'public'
-        const pathInBucket = pathSegments.slice(5).join('/'); // The rest of the segments joined
+    if (webhookUrl === 'YOUR_N8N_SAVE_CONTENT_WEBHOOK_URL') {
+         console.error("N8N_SAVE_CONTENT_WEBHOOK_URL secret not set or placeholder used.");
+         return new Response(JSON.stringify({ error: 'Server configuration error: Webhook URL missing.' }), {
+           status: 500,
+           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+         });
+    }
 
-        console.log(`Parsed Bucket Name: "${bucketName}"`);
-        console.log(`Parsed Path in Bucket: "${pathInBucket}"`);
+    console.log(`Calling webhook at: ${webhookUrl}`);
 
-        if (!bucketName || !pathInBucket) {
-             console.error("Failed to parse bucket name or path from minio_path.");
-             return new Response(JSON.stringify({ error: 'Failed to parse storage path from file details.' }), {
-               status: 500,
-               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-             });
-        }
+    const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST', // Or the method your webhook expects
+        headers: {
+            'Content-Type': 'application/json',
+            // Add any necessary authentication headers for your webhook here
+        },
+        body: JSON.stringify({
+            fileId: fileData.id,
+            fileName: fileData.name, // Original file name
+            minioPath: fileData.minio_path, // Original minio path
+            newContent: newContent, // The edited content
+            // Add any other data your webhook needs
+        }),
+    });
 
-        // Convert the HTML string to a Blob
-        const htmlBlob = new Blob([newHtmlContent], { type: 'text/html' });
-        console.log(`Created Blob of size ${htmlBlob.size} bytes.`);
+    console.log(`Webhook response status: ${webhookResponse.status}`);
 
-        // Upload (overwrite) the file content using Supabase Storage
-        console.log(`Attempting to upload/overwrite file in bucket "${bucketName}" at path "${pathInBucket}"`);
-        const { data: uploadData, error: uploadError } = await supabase.storage
-            .from(bucketName)
-            .upload(pathInBucket, htmlBlob, {
-                upsert: true, // This is key to overwrite the existing file
-                contentType: 'text/html', // Set the correct content type
-            });
-
-        if (uploadError) {
-            console.error("Error uploading file to Storage:", uploadError);
-            return new Response(JSON.stringify({ error: `Failed to save file content: ${uploadError.message}` }), {
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-        }
-
-        console.log("File content saved successfully:", uploadData);
-
-        // Return success response
-        return new Response(JSON.stringify({ message: 'HTML content saved successfully.', data: uploadData }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-
-    } catch (parseError: any) {
-        console.error("Error parsing minio_path URL:", parseError);
-        return new Response(JSON.stringify({ error: `Failed to process file path: ${parseError.message}` }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (!webhookResponse.ok) {
+        const errorBody = await webhookResponse.text();
+        console.error("Error calling webhook:", webhookResponse.status, webhookResponse.statusText);
+        console.error("Webhook Error Body:", errorBody);
+        return new Response(JSON.stringify({ error: `Failed to send content to webhook: Status ${webhookResponse.status}`, details: errorBody }), {
+            status: webhookResponse.status, // Return the status received from the webhook
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
 
+    const webhookResult = await webhookResponse.json(); // Or text(), depending on webhook response
+    console.log("Webhook response body:", webhookResult);
+
+    // Return success response
+    return new Response(JSON.stringify({ message: 'File content sent to webhook successfully.', webhookResponse: webhookResult }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   } catch (error: any) {
-    console.error("Error in 'save-html-content' Edge Function:", error);
+    console.error("Error in 'save-file-content' Edge Function:", error);
     return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

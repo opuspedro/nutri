@@ -1,8 +1,27 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 // Import the official Google Auth library using npm: prefix
 import { GoogleAuth } from 'npm:google-auth-library@9.11.0'; // Use npm: prefix
-// Import the shared utility function
-import { cleanFileName } from '../_shared/utils.ts'; // Import from shared utilities
+
+// Duplicated utility function (cannot import from local files in Edge Functions easily)
+function cleanFileName(fileName: string): string {
+  if (!fileName) return "";
+  let cleaned = fileName;
+
+  // Remove WhatsApp suffix
+  const whatsappSuffix = "@s.whatsapp.net";
+  if (cleaned.endsWith(whatsappSuffix)) {
+    cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
+  }
+
+  // Remove .txt extension if present
+  const txtSuffix = ".txt";
+  if (cleaned.toLowerCase().endsWith(txtSuffix)) {
+      cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
+  }
+
+  return cleaned;
+}
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,7 +29,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("Edge Function received request.");
+  console.log("Edge Function 'fetch-sheet-data' received request.");
   console.log("Method:", req.method);
   console.log("Headers:", req.headers);
 

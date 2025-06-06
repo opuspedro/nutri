@@ -3,6 +3,27 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 // Import the official Google Auth library using npm: prefix
 import { GoogleAuth } from 'npm:google-auth-library@9.11.0'; // Use npm: prefix
 
+// Duplicated utility function (cannot import from local files in Edge Functions easily)
+function cleanFileName(fileName: string): string {
+  if (!fileName) return "";
+  let cleaned = fileName;
+
+  // Remove WhatsApp suffix
+  const whatsappSuffix = "@s.whatsapp.net";
+  if (cleaned.endsWith(whatsappSuffix)) {
+    cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
+  }
+
+  // Remove .txt extension if present
+  const txtSuffix = ".txt";
+  if (cleaned.toLowerCase().endsWith(txtSuffix)) {
+      cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
+  }
+
+  return cleaned;
+}
+
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -64,7 +85,10 @@ serve(async (req) => {
     console.log("File details fetched:", fileData);
 
     // --- Fetch Google Sheet Data ---
-    console.log(`Attempting to fetch sheet data for fileName: ${fileData.name}`);
+    // Use the cleanFileName utility here as well before searching the sheet
+    const cleanedFileName = cleanFileName(fileData.name);
+    console.log(`Attempting to fetch sheet data for cleaned fileName: ${cleanedFileName}`);
+
 
     const credentialsJson = Deno.env.get('GOOGLE_SHEETS_CREDENTIALS_JSON');
     const SHEET_ID = Deno.env.get('SHEET_ID'); // Read from secret
@@ -140,17 +164,17 @@ serve(async (req) => {
         sheetHeader = sheetValues[0]; // First row is header
         const dataRows = sheetValues.slice(1); // Rest are data rows
 
-        // Find the row matching the file name
+        // Find the row matching the CLEANED file name
         const foundRow = dataRows.find(row =>
             row && row.length > FILE_NAME_COLUMN_INDEX &&
-            row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === fileData.name.trim()
+            row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === cleanedFileName.trim() // Use cleanedFileName here
         );
 
         if (foundRow) {
             foundSheetRowData = { header: sheetHeader, row: foundRow };
-            console.log(`Found sheet data for file "${fileData.name}".`);
+            console.log(`Found sheet data for cleaned file "${cleanedFileName}".`);
         } else {
-            console.log(`No sheet data found for file "${fileData.name}".`);
+            console.log(`No sheet data found for cleaned file "${cleanedFileName}".`);
         }
     } else {
         console.log("No data found in the specified sheet range.");
@@ -179,7 +203,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
             fileId: fileData.id,
-            fileName: fileData.name,
+            fileName: fileData.name, // Send original name
+            cleanedFileName: cleanedFileName, // Send cleaned name too, just in case n8n needs it
             minioPath: fileData.minio_path,
             sheetData: foundSheetRowData, // <-- Including the fetched sheet data here
             // Add any other data your n8n workflow needs
@@ -207,7 +232,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in 'regenerate-pdf' Edge Function:", error);
     return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {
       status: 500,

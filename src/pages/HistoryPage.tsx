@@ -2,19 +2,17 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getReviewedFiles } from "@/state/reviewState"; // Import the new function
+import { getReviewedFiles } from "@/state/reviewState"; // Import the function that now queries files table
 import { showLoading, dismissToast, showError } from "@/utils/toast";
+import { cleanFileName } from "@/lib/utils"; // Import cleanFileName for display
 
-// Define the type for reviewed files based on the Supabase query result
+// Define the type for reviewed files - now fetching directly from files table
 interface ReviewedFile {
-  id: string; // Review ID
-  file_id: string; // File ID
-  status: 'confirmed' | 'denied';
-  reviewed_at: string;
-  files: { // Details of the reviewed file from the join
-    name: string;
-    minio_path: string;
-  } | null;
+  id: string; // This is the file ID
+  name: string;
+  minio_path: string;
+  created_at: string;
+  status: 'confirmed' | 'denied'; // Status will be non-null for reviewed files
 }
 
 const HistoryPage = () => {
@@ -26,8 +24,10 @@ const HistoryPage = () => {
       setIsLoading(true);
       const loadingToastId = showLoading("Carregando histórico de revisões de arquivos...");
       try {
+        // getReviewedFiles now fetches files where status is 'confirmed' or 'denied'
         const files = await getReviewedFiles();
         setReviewedFiles(files);
+        console.log("Fetched reviewed files:", files); // Log fetched files
       } catch (error) {
         console.error("Failed to fetch reviewed files:", error);
         showError("Falha ao carregar histórico de revisões de arquivos.");
@@ -60,21 +60,21 @@ const HistoryPage = () => {
             Nenhum arquivo revisado encontrado.
           </div>
         ) : (
-          reviewedFiles.map((review) => ( // Map over reviews
-            <Card key={review.id}> {/* Use review ID as key */}
+          reviewedFiles.map((file) => ( // Map over files directly
+            <Card key={file.id}> {/* Use file ID as key */}
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                {/* Displaying the file name */}
+                {/* Displaying the cleaned file name */}
                 <CardTitle className="text-lg font-medium">
-                  {review.files?.name || 'Nome Desconhecido'}
+                  {cleanFileName(file.name) || 'Nome Desconhecido'} {/* Use cleanFileName */}
                 </CardTitle>
-                 <Badge variant={review.status === 'confirmed' ? 'default' : 'destructive'}>
-                    {review.status === 'confirmed' ? 'Confirmado' : 'Negado'}
+                 <Badge variant={file.status === 'confirmed' ? 'default' : 'destructive'}>
+                    {file.status === 'confirmed' ? 'Confirmado' : 'Negado'}
                  </Badge>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Arquivo ID: {review.file_id}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Arquivo ID: {file.id}</p> {/* Use file.id */}
                  {/* Removed: Display the path as text */}
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Data Revisão: {new Date(review.reviewed_at).toLocaleDateString()}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">Data Criação: {new Date(file.created_at).toLocaleDateString()}</p> {/* Use file.created_at */}
               </CardContent>
             </Card>
           ))

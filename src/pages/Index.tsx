@@ -2,17 +2,18 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"; // Import CardFooter
 import { Button } from "@/components/ui/button";
-import { getPendingFiles } from "@/state/reviewState";
+import { getPendingFiles } from "@/state/reviewState"; // This function now filters by status = null
 import { showLoading, dismissToast, showError, showSuccess } from "@/utils/toast"; // Import showSuccess
 import { Download, Eye } from "lucide-react"; // Import icons
 import { cleanFileName } from "@/lib/utils"; // Import the utility function
 
-// Define the type for pending files
+// Define the type for pending files - now includes status
 interface PendingFile {
   id: string; // This is the file ID
   name: string;
   minio_path: string;
   created_at: string;
+  status: 'confirmed' | 'denied' | null; // Status will be null for pending files
 }
 
 const Index = () => {
@@ -25,6 +26,7 @@ const Index = () => {
     setIsLoading(true);
     const loadingToastId = showLoading("Carregando arquivos pendentes para revisão...");
     try {
+      // getPendingFiles now fetches files where status is null
       const files = await getPendingFiles();
       setPendingFiles(files);
       console.log("Fetched pending files:", files); // Log fetched files

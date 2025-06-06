@@ -1,38 +1,34 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// Define the type for files based on the Supabase query result
+// Define the type for files based on the Supabase query result, including the new status
 interface ReviewFile {
   id: string; // This is the file ID
   name: string;
   minio_path: string;
   created_at: string; // Assuming files table has created_at
+  status: 'confirmed' | 'denied' | null; // Add the new status column
 }
 
-// Define the type for reviewed files
+// Define the type for reviewed files - now fetching directly from files table
 interface ReviewedFile {
-  id: string; // This is the review ID
-  file_id: string; // The ID of the reviewed file
-  status: 'confirmed' | 'denied';
-  reviewed_at: string;
-  files: { // Details of the reviewed file from the join
-    name: string;
-    minio_path: string;
-  } | null; // Use null in case the join fails
+  id: string; // This is the file ID
+  name: string;
+  minio_path: string;
+  created_at: string;
+  status: 'confirmed' | 'denied'; // Status will be non-null for reviewed files
 }
 
 
-// Function to get files that are pending review (do not have an entry in the reviews table)
+// Function to get files that are pending review (status is null)
 export const getPendingFiles = async (): Promise<ReviewFile[]> => {
   console.log("--- getPendingFiles START ---");
-  console.log("Fetching files that do not have a review...");
+  console.log("Fetching files with status is null...");
   try {
-    // Select files and LEFT JOIN with reviews.
-    // Filter where the joined review's file_id is null.
-    // This selects files that do not have a corresponding review entry.
+    // Select files where the status column is null
     const { data, error } = await supabase
       .from('files')
-      .select('id, name, minio_path, created_at, reviews!left(file_id)') // Select file details and LEFT JOIN reviews
-      .is('reviews.file_id', null); // Filter for files where the joined review's file_id is null
+      .select('id, name, minio_path, created_at, status') // Select all relevant columns including status
+      .is('status', null); // Filter for files where status is null
 
     if (error) {
       console.error("Error fetching pending files:", error);
@@ -41,9 +37,6 @@ export const getPendingFiles = async (): Promise<ReviewFile[]> => {
 
     console.log("Pending files fetched:", data);
     console.log("--- getPendingFiles END (Success) ---");
-    // The data structure will include the joined reviews column,
-    // but we only need the file details for the return type.
-    // The filter ensures only files without reviews are returned.
     return data || [];
 
   } catch (error) {
@@ -53,14 +46,15 @@ export const getPendingFiles = async (): Promise<ReviewFile[]> => {
   }
 };
 
-// Function to get files that have been reviewed
+// Function to get files that have been reviewed (status is 'confirmed' or 'denied')
 export const getReviewedFiles = async (): Promise<ReviewedFile[]> => {
-   console.log("Fetching reviewed files from Supabase...");
+   console.log("Fetching reviewed files from Supabase (from files table)...");
   try {
-    // Select reviews and join with files to get file name and path
+    // Select files where the status is 'confirmed' or 'denied'
     const { data, error } = await supabase
-      .from('reviews')
-      .select('id, file_id, status, reviewed_at, files(name, minio_path)'); // Select review info and join file details
+      .from('files')
+      .select('id, name, minio_path, created_at, status') // Select relevant columns
+      .in('status', ['confirmed', 'denied']); // Filter for reviewed statuses
 
     if (error) {
       console.error("Error fetching reviewed files:", error);
@@ -68,7 +62,7 @@ export const getReviewedFiles = async (): Promise<ReviewedFile[]> => {
     }
 
     console.log("Reviewed files fetched:", data);
-    // The data structure is already close to ReviewedFile, just need to ensure types match
+    // The data structure now directly matches the ReviewedFile type
     return data as ReviewedFile[] || [];
 
   } catch (error) {
@@ -78,43 +72,38 @@ export const getReviewedFiles = async (): Promise<ReviewedFile[]> => {
   }
 };
 
-// Function to mark a file as reviewed
-export const markFileAsReviewed = async (fileId: string, status: 'confirmed' | 'denied') => {
-  console.log(`Marking file ${fileId} as ${status} in Supabase...`);
+// Function to update the status of a file in the files table
+export const updateFileStatus = async (fileId: string, status: 'confirmed' | 'denied') => {
+  console.log(`Updating status for file ${fileId} to ${status} in Supabase...`);
   try {
-    // Insert a new entry into the reviews table
+    // Update the status column in the files table
     const { data, error } = await supabase
-      .from('reviews')
-      .insert([
-        {
-          file_id: fileId,
-          status: status,
-          // reviewer_id is not needed based on the new schema
-        }
-      ])
-      .select(); // Add .select() to get the inserted data back
+      .from('files')
+      .update({ status: status }) // Set the new status
+      .eq('id', fileId) // Where the file ID matches
+      .select(); // Select the updated row to confirm
 
     if (error) {
-      console.error(`Error marking file ${fileId} as ${status}:`, error);
+      console.error(`Error updating status for file ${fileId} to ${status}:`, error);
       throw error;
     }
 
-    console.log(`File ${fileId} marked as ${status} successfully.`, data);
+    console.log(`Status for file ${fileId} updated to ${status} successfully.`, data);
     return data;
 
   } catch (error) {
-    console.error(`Failed to mark file ${fileId} as ${status}:`, error);
+    console.error(`Failed to update status for file ${fileId} to ${status}:`, error);
     throw error; // Re-throw the error to be handled by the calling component
   }
 };
 
-// Function to get a single file by ID
+// Function to get a single file by ID (still queries files table)
 export const getFileById = async (fileId: string): Promise<ReviewFile | null> => {
   console.log(`Fetching file ${fileId} from Supabase...`);
   try {
     const { data, error } = await supabase
       .from('files')
-      .select('id, name, minio_path, created_at')
+      .select('id, name, minio_path, created_at, status') // Include status in select
       .eq('id', fileId)
       .single(); // Expecting a single row
 
@@ -131,6 +120,6 @@ export const getFileById = async (fileId: string): Promise<ReviewFile | null> =>
   }
 };
 
-// Remove project-related functions
+// Remove project-related functions (already removed in previous state)
 // export const createProject = async (name: string) => { ... }
 // export const getProjectFiles = async (projectId: string): Promise<Omit<ProjectFile, 'project_id'>[]> => { ... }

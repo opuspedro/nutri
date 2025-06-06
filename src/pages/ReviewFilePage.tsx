@@ -316,8 +316,8 @@ const ReviewFilePage = () => {
 
   // Define the starting column index for displaying data (H is index 7 in B:BA range)
   const START_COLUMN_INDEX = 7;
-  // Define the column index for the person's name (C is index 1 in the B:BA range)
-  const PERSON_NAME_COLUMN_INDEX = 1;
+  // Define the column index for the person's name (C is index 2 in the B:BA range)
+  const PERSON_NAME_COLUMN_INDEX = 2; // Changed from 1 to 2
 
 
   return (

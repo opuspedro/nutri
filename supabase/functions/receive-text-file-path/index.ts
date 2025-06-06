@@ -17,46 +17,47 @@ serve(async (req) => {
 
   try {
     console.log("Attempting to parse request body...");
-    const { minio_path } = await req.json();
-    console.log("Request body parsed successfully.");
+    // Expecting both minio_path and name
+    const { minio_path, name } = await req.json();
+    console.log("Request body parsed successfully. minio_path:", minio_path, "name:", name);
 
-    if (!minio_path || typeof minio_path !== 'string') {
-      console.error('Missing or invalid minio_path in request body');
-      return new Response(JSON.stringify({ error: 'Missing or invalid minio_path in request body' }), {
+    // Validate both minio_path and name
+    if (!minio_path || typeof minio_path !== 'string' || !name || typeof name !== 'string') {
+      console.error('Missing or invalid minio_path or name in request body');
+      return new Response(JSON.stringify({ error: 'Missing or invalid minio_path or name in request body. Both are required strings.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Initialize Supabase client with the service role key for backend operations
-    // The service role key bypasses RLS, which is suitable for trusted automations
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '' // Use service role key
     );
     console.log("Supabase client initialized with service role key.");
 
-    // Insert the minio_path into the new text_files table
-    console.log(`Inserting minio_path "${minio_path}" into public.text_files`);
+    // Insert the minio_path and name into the text_files table
+    console.log(`Inserting minio_path "${minio_path}" and name "${name}" into public.text_files`);
     const { data, error } = await supabase
       .from('text_files')
       .insert([
-        { minio_path: minio_path }
+        { minio_path: minio_path, name: name } // Include the name column
       ])
       .select(); // Select the inserted row to confirm
 
     if (error) {
       console.error("Error inserting data into text_files:", error);
-      return new Response(JSON.stringify({ error: `Failed to save file path: ${error.message}` }), {
+      return new Response(JSON.stringify({ error: `Failed to save file path and name: ${error.message}` }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log("File path saved successfully:", data);
+    console.log("File path and name saved successfully:", data);
 
     // Return success response
-    return new Response(JSON.stringify({ message: 'File path received and saved successfully.', data: data }), {
+    return new Response(JSON.stringify({ message: 'File path and name received and saved successfully.', data: data }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

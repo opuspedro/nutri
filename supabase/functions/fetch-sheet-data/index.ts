@@ -3,20 +3,21 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { GoogleAuth } from 'npm:google-auth-library@9.11.0'; // Use npm: prefix
 
 // Duplicated utility function (cannot import from local files in Edge Functions easily)
+// FIX: Adjusted logic to remove .txt first, then @s.whatsapp.net
 function cleanFileName(fileName: string): string {
   if (!fileName) return "";
   let cleaned = fileName;
 
-  // Remove WhatsApp suffix
-  const whatsappSuffix = "@s.whatsapp.net";
-  if (cleaned.endsWith(whatsappSuffix)) {
-    cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
-  }
-
-  // Remove .txt extension if present (case-insensitive)
+  // Remove .txt extension if present (case-insensitive) - Do this first
   const txtSuffix = ".txt";
   if (cleaned.toLowerCase().endsWith(txtSuffix)) {
       cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
+  }
+
+  // Remove WhatsApp suffix if present at the end of the remaining string
+  const whatsappSuffix = "@s.whatsapp.net";
+  if (cleaned.endsWith(whatsappSuffix)) {
+    cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
   }
 
   console.log(`EF cleanFileName: Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log

@@ -7,17 +7,14 @@ function cleanFileName(fileName: string): string {
   if (!fileName) return "";
   let cleaned = fileName;
 
-  // Remove WhatsApp suffix
-  const whatsappSuffix = "@s.whatsapp.net";
-  if (cleaned.endsWith(whatsappSuffix)) {
-    cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
-  }
+  // Remove .txt extension first (case-insensitive)
+  cleaned = cleaned.replace(/\.txt$/i, '');
 
-  // Remove .txt extension if present (case-insensitive)
-  const txtSuffix = ".txt";
-  if (cleaned.toLowerCase().endsWith(txtSuffix)) {
-      cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
-  }
+  // Remove WhatsApp suffix
+  cleaned = cleaned.replace(/@s\.whatsapp\.net$/, '');
+
+  // Trim any leading/trailing whitespace that might result
+  cleaned = cleaned.trim();
 
   console.log(`EF cleanFileName: Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
 

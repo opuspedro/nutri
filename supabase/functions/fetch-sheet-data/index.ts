@@ -3,24 +3,24 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { GoogleAuth } from 'npm:google-auth-library@9.11.0'; // Use npm: prefix
 
 // Duplicated utility function (cannot import from local files in Edge Functions easily)
-// FIX: Adjusted logic to remove .txt first, then @s.whatsapp.net
+// Reverting to previous logic: remove @s.whatsapp.net first, then .txt
 function cleanFileName(fileName: string): string {
   if (!fileName) return "";
   let cleaned = fileName;
 
-  // Remove .txt extension if present (case-insensitive) - Do this first
-  const txtSuffix = ".txt";
-  if (cleaned.toLowerCase().endsWith(txtSuffix)) {
-      cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
-  }
-
-  // Remove WhatsApp suffix if present at the end of the remaining string
+  // Remove WhatsApp suffix if present at the end
   const whatsappSuffix = "@s.whatsapp.net";
   if (cleaned.endsWith(whatsappSuffix)) {
     cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
   }
 
-  console.log(`EF cleanFileName: Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
+  // Remove .txt extension if present (case-insensitive)
+  const txtSuffix = ".txt";
+  if (cleaned.toLowerCase().endsWith(txtSuffix)) {
+      cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
+  }
+
+  console.log(`EF cleanFileName (Reverted Logic): Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
 
   return cleaned;
 }
@@ -55,9 +55,9 @@ serve(async (req) => {
       });
     }
 
-    // Clean the file name before using it for the sheet lookup
+    // Clean the file name using the reverted logic before using it for the sheet lookup
     const cleanedFileName = cleanFileName(fileName);
-    console.log(`Cleaned file name for sheet lookup: "${cleanedFileName}"`);
+    console.log(`Cleaned file name for sheet lookup (Reverted Logic): "${cleanedFileName}"`);
 
 
     // Get Google Sheets credentials from Supabase Secret

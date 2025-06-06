@@ -378,7 +378,7 @@ const ReviewFilePage = () => {
                              <DialogHeader>
                                  <DialogTitle>Confirmar Salvamento</DialogTitle>
                                  <DialogDescription>
-                                     Ao confirmar, o conteúdo editado do arquivo será enviado para o webhook configurado e você retornará para a lista de arquivos pendentes.
+                                     Ao confirmar, o arquivo voltará para o painel inicial. Você precisará, então, abri-lo e confirmar o envio
                                  </DialogDescription>
                              </DialogHeader>
                              <DialogFooter>

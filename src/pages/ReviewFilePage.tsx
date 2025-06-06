@@ -41,6 +41,10 @@ const ReviewFilePage = () => {
   const [fileContent, setFileContent] = useState<string>(""); // State for file content
   const [isSavingContent, setIsSavingContent] = useState(false); // State for saving content
 
+  // Helper to check if the file is a TXT file
+  const isTxtFile = fileToReview?.name?.toLowerCase().endsWith('.txt') || false;
+
+
   // Function to fetch file details
   const fetchFile = async (id: string) => {
      setIsLoadingFile(true);
@@ -78,11 +82,11 @@ const ReviewFilePage = () => {
          showError(`Falha ao carregar dados da planilha: ${error.message}`);
          setSheetData(null);
        } else if (data && data.data) {
-         console.log("Sheet data received:", data.data);
+         console.log("Sheet data received from Edge Function:", data.data); // Log received data
          // Assuming data.data is { header: string[], row: string[] }
          setSheetData(data.data as SheetData);
        } else {
-         console.log("Edge Function returned no data for this file.");
+         console.log("Edge Function returned no data. This might mean no matching row was found for the file name.");
          setSheetData(null); // No data found for this file
        }
      } catch (error) {
@@ -137,6 +141,12 @@ const ReviewFilePage = () => {
     });
 
   }, [fileId]); // Re-run effect if fileId changes
+
+  // Log sheetData state whenever it changes
+  useEffect(() => {
+      console.log("Current sheetData state:", sheetData);
+  }, [sheetData]);
+
 
   // Function to handle file download using the public minio_path URL
   const handleDownload = () => {
@@ -205,7 +215,7 @@ const ReviewFilePage = () => {
       try {
           // Call the updated Edge Function
           const { data, error } = await supabase.functions.invoke('save-file-content', { // Use the new function name
-              body: { fileId: fileId, newContent: fileContent }, // Pass fileId and newContent
+              body: { fileId: fileId, newHtmlContent: fileContent }, // Pass fileId and newContent (renamed to newHtmlContent in EF)
           });
 
           if (error) {
@@ -270,7 +280,7 @@ const ReviewFilePage = () => {
   const isProcessingReview = confirming || denying || regenerating || isSavingContent; // Include saving content in processing state
   const isPageLoading = isLoadingFile || isLoadingSheetData || isProcessingReview;
 
-  // Define the starting column index for displaying data (H is index 7)
+  // Define the starting column index for displaying data (H is index 7 in B:BA range)
   const START_COLUMN_INDEX = 7;
   // Define the column index for the person's name (C is index 1 in the B:BA range)
   const PERSON_NAME_COLUMN_INDEX = 1;
@@ -308,10 +318,14 @@ const ReviewFilePage = () => {
                 <Button
                   variant="outline"
                   onClick={handlePreview}
-                  disabled={isPageLoading} // Disable if page is loading or processing review
+                  disabled={isPageLoading || isTxtFile} // Disable if page is loading, processing review, OR is a TXT file
                   size="sm" // Make button smaller to fit header
                 >
-                   {showPreview ? (
+                   {isTxtFile ? (
+                       <>
+                           <EyeOff className="mr-2 h-4 w-4" /> Prévia Indisponível
+                       </>
+                   ) : showPreview ? (
                        <>
                            <EyeOff className="mr-2 h-4 w-4" /> Esconder Preview
                        </>
@@ -354,7 +368,8 @@ const ReviewFilePage = () => {
 
                 {/* Area de Preview do Arquivo */}
                 <h3 className="text-xl font-semibold mb-4">Preview do Arquivo</h3>
-                {showPreview && fileToReview.minio_path ? (
+                {/* Conditional rendering: Only show iframe if NOT a TXT file AND showPreview is true */}
+                {showPreview && fileToReview.minio_path && !isTxtFile ? (
                     <div className="w-full h-[600px] border rounded-md overflow-hidden">
                         <iframe
                             src={fileToReview.minio_path}
@@ -367,13 +382,13 @@ const ReviewFilePage = () => {
                     </div>
                 ) : (
                     <div className="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 rounded-md">
-                      Clique em "Mostrar Preview" para visualizar o arquivo.
+                      {isTxtFile ? "Prévia de arquivo TXT não disponível." : "Clique em 'Mostrar Preview' para visualizar o arquivo."}
                     </div>
                 )}
 
                 <Separator className="my-6" />
 
-                {/* Area de Dados da Planilha */}
+                {/* Area de Dados da Planilha Associados */}
                 <h3 className="text-xl font-semibold mb-4">Dados da Planilha Associados</h3>
                 {isLoadingSheetData ? (
                     <div className="text-center text-gray-500 dark:text-gray-400">
@@ -400,7 +415,7 @@ const ReviewFilePage = () => {
                                 }
                                 return null; // Don't render if no value or no header
                             })}
-                            {/* Show message if no relevant data found */}
+                            {/* Show message if no relevant data found from START_COLUMN_INDEX onwards */}
                             {sheetData.row.slice(START_COLUMN_INDEX).every(cellValue => !cellValue || cellValue.toString().trim() === '') && (
                                 <p className="text-center text-gray-500 dark:text-gray-400">
                                     Nenhum dado relevante encontrado a partir da Coluna H.
@@ -426,15 +441,17 @@ const ReviewFilePage = () => {
                    <Download className="mr-2 h-4 w-4" />
                    {downloading ? "Baixando..." : "Download"}
                 </Button>
-                 {/* Regenerate PDF Button */}
-                 <Button
-                   onClick={handleRegeneratePdf}
-                   disabled={regenerating || isPageLoading}
-                   variant="secondary" // Use secondary variant
-                 >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    {regenerating ? "Refazendo..." : "Refazer PDF"}
-                 </Button>
+                 {/* Regenerate PDF Button - Only show for non-TXT files */}
+                 {!isTxtFile && (
+                     <Button
+                       onClick={handleRegeneratePdf}
+                       disabled={regenerating || isPageLoading}
+                       variant="secondary" // Use secondary variant
+                     >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        {regenerating ? "Refazendo..." : "Refazer PDF"}
+                     </Button>
+                 )}
               </CardFooter>
             </Card>
         </div>

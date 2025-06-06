@@ -27,6 +27,7 @@ const Index = () => {
     try {
       const files = await getPendingFiles();
       setPendingFiles(files);
+      console.log("Fetched pending files:", files); // Log fetched files
     } catch (error) {
       console.error("Failed to fetch pending files:", error);
       showError("Falha ao carregar arquivos pendentes.");
@@ -91,41 +92,48 @@ const Index = () => {
             Nenhum arquivo pendente para revisão.
           </div>
         ) : (
-          pendingFiles.map((file) => (
-            // Card itself is not a link anymore, actions are via buttons
-              <Card key={file.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  {/* File name is now just text, using the cleaned name */}
-                  <CardTitle className="text-lg font-medium truncate">{cleanFileName(file.name)}</CardTitle>
-                  <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">ID: {file.id}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                   {/* Removed: Display the path as text */}
-                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Criado em: {new Date(file.created_at).toLocaleDateString()}</p>
-                </CardContent>
-                <CardFooter className="flex justify-between items-center">
-                    {/* Download Button */}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownload(file)}
-                        disabled={downloadingFileId === file.id}
-                    >
-                        <Download className="mr-2 h-4 w-4" />
-                        {downloadingFileId === file.id ? "Baixando..." : "Download"}
-                    </Button>
-                     {/* Review Button */}
-                    <Button
-                        variant="default" // Use default variant for primary action
-                        size="sm"
-                        onClick={() => handleReviewClick(file.id)}
-                    >
-                        <Eye className="mr-2 h-4 w-4" />
-                        Revisar
-                    </Button>
-                </CardFooter>
-              </Card>
-          ))
+          pendingFiles.map((file) => {
+            // Add logs here to inspect the file name before and after cleaning
+            console.log(`Index Page - Original file name: "${file.name}"`);
+            const cleanedName = cleanFileName(file.name);
+            console.log(`Index Page - Cleaned file name: "${cleanedName}"`);
+
+            return (
+              // Card itself is not a link anymore, actions are via buttons
+                <Card key={file.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    {/* File name is now just text, using the cleaned name */}
+                    <CardTitle className="text-lg font-medium truncate">{cleanedName}</CardTitle> {/* Use the cleanedName variable */}
+                    <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">ID: {file.id}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                     {/* Removed: Display the path as text */}
+                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Criado em: {new Date(file.created_at).toLocaleDateString()}</p>
+                  </CardContent>
+                  <CardFooter className="flex justify-between items-center">
+                      {/* Download Button */}
+                      <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownload(file)}
+                          disabled={downloadingFileId === file.id}
+                      >
+                          <Download className="mr-2 h-4 w-4" />
+                          {downloadingFileId === file.id ? "Baixando..." : "Download"}
+                      </Button>
+                       {/* Review Button */}
+                      <Button
+                          variant="default" // Use default variant for primary action
+                          size="sm"
+                          onClick={() => handleReviewClick(file.id)}
+                      >
+                          <Eye className="mr-2 h-4 w-4" />
+                          Revisar
+                      </Button>
+                  </CardFooter>
+                </Card>
+            );
+          })
         )}
       </div>
     </div>

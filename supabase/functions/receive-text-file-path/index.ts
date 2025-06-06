@@ -37,27 +37,27 @@ serve(async (req) => {
     );
     console.log("Supabase client initialized with service role key.");
 
-    // Insert the minio_path and name into the text_files table
-    console.log(`Inserting minio_path "${minio_path}" and name "${name}" into public.text_files`);
+    // Insert the minio_path and name into the *files* table
+    console.log(`Inserting minio_path "${minio_path}" and name "${name}" into public.files`);
     const { data, error } = await supabase
-      .from('text_files')
+      .from('files') // *** Changed from 'text_files' to 'files' ***
       .insert([
         { minio_path: minio_path, name: name } // Include the name column
       ])
       .select(); // Select the inserted row to confirm
 
     if (error) {
-      console.error("Error inserting data into text_files:", error);
+      console.error("Error inserting data into files:", error);
       return new Response(JSON.stringify({ error: `Failed to save file path and name: ${error.message}` }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log("File path and name saved successfully:", data);
+    console.log("File path and name saved successfully into files table:", data);
 
     // Return success response
-    return new Response(JSON.stringify({ message: 'File path and name received and saved successfully.', data: data }), {
+    return new Response(JSON.stringify({ message: 'File path and name received and saved successfully into files table.', data: data }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

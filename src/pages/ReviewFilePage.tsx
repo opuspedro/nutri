@@ -168,6 +168,10 @@ const ReviewFilePage = () => {
   // Log sheetData state whenever it changes
   useEffect(() => {
       console.log("Current sheetData state:", sheetData);
+      // Add a log to check the specific value for the name
+      if (sheetData?.row) {
+          console.log(`Value at PERSON_NAME_COLUMN_INDEX (${PERSON_NAME_COLUMN_INDEX}):`, sheetData.row[PERSON_NAME_COLUMN_INDEX]);
+      }
   }, [sheetData]);
 
 

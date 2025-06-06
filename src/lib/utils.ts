@@ -10,15 +10,17 @@ export function cleanFileName(fileName: string): string {
   if (!fileName) return "";
   let cleaned = fileName;
 
-  // Remove .txt extension first (case-insensitive)
-  cleaned = cleaned.replace(/\.txt$/i, '');
-
   // Remove WhatsApp suffix
-  cleaned = cleaned.replace(/@s\.whatsapp\.net$/, '');
+  const whatsappSuffix = "@s.whatsapp.net";
+  if (cleaned.endsWith(whatsappSuffix)) {
+    cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
+  }
 
-  // Trim any leading/trailing whitespace that might result
-  cleaned = cleaned.trim();
-
+  // Remove .txt extension if present (case-insensitive)
+  const txtSuffix = ".txt";
+  if (cleaned.toLowerCase().endsWith(txtSuffix)) {
+      cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
+  }
 
   console.log(`cleanFileName: Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
 

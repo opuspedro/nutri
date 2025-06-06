@@ -175,6 +175,8 @@ serve(async (req) => {
     const headerRow = sheetValues[0];
     const dataRows = sheetValues.slice(1); // Skip header row
 
+    console.log("Sheet Header Row:", headerRow); // Log the header row
+
     console.log(`Searching for cleaned file name "${cleanedFileName}" in column index ${FILE_NAME_COLUMN_INDEX} of data rows.`);
     console.log("First 5 data rows:", dataRows.slice(0, 5)); // Log first few data rows
 

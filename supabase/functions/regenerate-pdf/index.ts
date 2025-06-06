@@ -14,11 +14,13 @@ function cleanFileName(fileName: string): string {
     cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
   }
 
-  // Remove .txt extension if present
+  // Remove .txt extension if present (case-insensitive)
   const txtSuffix = ".txt";
   if (cleaned.toLowerCase().endsWith(txtSuffix)) {
       cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
   }
+
+  console.log(`EF cleanFileName: Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
 
   return cleaned;
 }

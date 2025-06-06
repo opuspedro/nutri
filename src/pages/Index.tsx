@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getPendingFiles } from "@/state/reviewState"; // This function now filters by status = null
 import { showLoading, dismissToast, showError, showSuccess } from "@/utils/toast"; // Import showSuccess
 import { Download, Eye } from "lucide-react"; // Import icons
-import { cleanFileName } from "@/lib/utils"; // Import the utility function
+import { cleanFileName, formatDisplayName } from "@/lib/utils"; // Import both functions
 
 // Define the type for pending files - now includes status
 interface PendingFile {
@@ -95,21 +95,19 @@ const Index = () => {
           </div>
         ) : (
           pendingFiles.map((file) => {
-            // Add logs here to inspect the file name before and after cleaning
-            console.log(`Index Page - Original file name: "${file.name}"`);
-            const cleanedName = cleanFileName(file.name);
-            console.log(`Index Page - Cleaned file name: "${cleanedName}"`);
+            // Use formatDisplayName for the visual display name
+            const displayName = formatDisplayName(file.name);
 
-            // *** ADDING LOG DIRECTLY IN JSX RENDER ***
-            console.log(`Index Page - Value used in CardTitle: "${cleanedName}"`);
-            // *****************************************
+            console.log(`Index Page - Original file name: "${file.name}"`);
+            console.log(`Index Page - Display name (formatted): "${displayName}"`);
+            console.log(`Index Page - Cleaned name (for logic): "${cleanFileName(file.name)}"`); // Log cleanFileName result too
 
             return (
               // Card itself is not a link anymore, actions are via buttons
                 <Card key={file.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
                   <CardHeader>
-                    {/* File name is now just text, using the cleaned name */}
-                    <CardTitle className="text-lg font-medium truncate">{cleanedName}</CardTitle> {/* Use the cleanedName variable */}
+                    {/* File name is now just text, using the formatted display name */}
+                    <CardTitle className="text-lg font-medium truncate">{displayName}</CardTitle> {/* Use the displayName variable */}
                     <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">ID: {file.id}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">

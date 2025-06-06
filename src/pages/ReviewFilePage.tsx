@@ -385,7 +385,7 @@ const ReviewFilePage = () => {
                              <DialogHeader>
                                  <DialogTitle>Confirmar Salvamento</DialogTitle>
                                  <DialogDescription>
-                                     Ao confirmar, o arquivo voltará para o painel inicial. Você precisará, então, abri-lo e confirmar o envio
+                                     Ao 'confirmar salvar', o arquivo voltará para o painel inicial. Espere cerca de um minuto para que ele seja atualizado no banco de dados. Você precisará, então, abri-lo novamente e confirmar o envio.
                                  </DialogDescription>
                              </DialogHeader>
                              <DialogFooter>

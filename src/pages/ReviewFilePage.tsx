@@ -8,6 +8,7 @@ import { markFileAsReviewed, getFileById } from "@/state/reviewState"; // Import
 import { Download, Eye, EyeOff, RefreshCw } from "lucide-react"; // Import icons, including RefreshCw
 import { supabase } from "@/integrations/supabase/client"; // Import Supabase client
 import { cleanFileName } from "@/lib/utils"; // Import the utility function
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea for editing
 
 // Define the type for a single file
 interface ReviewFile {
@@ -37,6 +38,8 @@ const ReviewFilePage = () => {
   const [confirming, setConfirming] = useState(false);
   const [denying, setDenying] = useState(false);
   const [regenerating, setRegenerating] = useState(false); // State for PDF regeneration
+  const [fileContent, setFileContent] = useState<string>(""); // State for file content
+  const [isSavingContent, setIsSavingContent] = useState(false); // State for saving content
 
   // Function to fetch file details
   const fetchFile = async (id: string) => {
@@ -91,6 +94,27 @@ const ReviewFilePage = () => {
      }
    };
 
+   // Function to fetch file content
+   const fetchFileContent = async (minioPath: string) => {
+       console.log(`Fetching file content from: ${minioPath}`);
+       try {
+           const response = await fetch(minioPath);
+           if (!response.ok) {
+               console.error(`Error fetching file content: ${response.status} ${response.statusText}`);
+               showError(`Falha ao carregar conteúdo do arquivo: ${response.statusText}`);
+               setFileContent("");
+               return;
+           }
+           const textContent = await response.text();
+           console.log("File content fetched successfully.");
+           setFileContent(textContent);
+       } catch (error) {
+           console.error("Failed to fetch file content:", error);
+           showError("Falha ao carregar conteúdo do arquivo.");
+           setFileContent("");
+       }
+   };
+
 
   useEffect(() => {
     if (!fileId) {
@@ -101,9 +125,14 @@ const ReviewFilePage = () => {
 
     // Fetch file details first
     fetchFile(fileId).then(file => {
-        // If file details are successfully fetched, then fetch sheet data
-        if (file && file.name) {
-            fetchSheetData(file.name);
+        // If file details are successfully fetched, then fetch sheet data and file content
+        if (file) {
+            if (file.name) {
+                fetchSheetData(file.name);
+            }
+            if (file.minio_path) {
+                 fetchFileContent(file.minio_path); // Fetch content using the path
+            }
         }
     });
 
@@ -117,7 +146,7 @@ const ReviewFilePage = () => {
 
     try {
       console.log(`Attempting to download file from public URL: ${fileToReview.minio_path}`);
-      // Use the public URL directly
+      // Use the public URL directly to open in a new tab, which often triggers download
       window.open(fileToReview.minio_path, '_blank');
       showSuccess(`Download iniciado para ${fileToReview.name}!`);
 
@@ -167,6 +196,36 @@ const ReviewFilePage = () => {
       }
   };
 
+  // Function to handle saving the edited text content
+  const handleSaveContent = async () => {
+      if (!fileId || fileContent === null) return; // Ensure fileId and content exist
+      setIsSavingContent(true);
+      const loadingToastId = showLoading("Salvando conteúdo do arquivo...");
+
+      try {
+          // Call the updated Edge Function
+          const { data, error } = await supabase.functions.invoke('save-file-content', { // Use the new function name
+              body: { fileId: fileId, newContent: fileContent }, // Pass fileId and newContent
+          });
+
+          if (error) {
+              console.error("Error invoking save-file-content Edge Function:", error);
+              showError(`Falha ao salvar conteúdo do arquivo: ${error.message}`);
+          } else {
+              console.log("Save file content Edge Function response:", data);
+              showSuccess("Conteúdo do arquivo salvo com sucesso!");
+              // Optionally, refetch file content to ensure UI is in sync,
+              // or just rely on the state update from the textarea.
+          }
+      } catch (error: any) {
+          console.error("Failed to call save-file-content Edge Function:", error);
+          showError(error.message || "Falha ao salvar conteúdo do arquivo.");
+      } finally {
+          dismissToast(loadingToastId);
+          setIsSavingContent(false);
+      }
+  };
+
 
   // Function to handle confirmation
   const handleConfirm = async () => {
@@ -208,7 +267,7 @@ const ReviewFilePage = () => {
     }
   };
 
-  const isProcessingReview = confirming || denying || regenerating; // Include regenerating in processing state
+  const isProcessingReview = confirming || denying || regenerating || isSavingContent; // Include saving content in processing state
   const isPageLoading = isLoadingFile || isLoadingSheetData || isProcessingReview;
 
   // Define the starting column index for displaying data (H is index 7)
@@ -264,7 +323,37 @@ const ReviewFilePage = () => {
                 </Button>
               </CardHeader>
               <CardContent>
+                {/* Area de Edição de Texto */}
+                <h3 className="text-xl font-semibold mb-4">Conteúdo do Arquivo</h3>
+                {isLoadingFile ? (
+                     <div className="text-center text-gray-500 dark:text-gray-400">
+                        Carregando conteúdo...
+                     </div>
+                ) : (
+                    <Textarea
+                        value={fileContent}
+                        onChange={(e) => setFileContent(e.target.value)}
+                        className="w-full h-64 font-mono text-sm" // Added font-mono for code-like appearance
+                        placeholder="Carregando conteúdo do arquivo..."
+                        disabled={isPageLoading} // Disable editing while loading or processing
+                    />
+                )}
+                 {/* Save Content Button */}
+                 <div className="mt-4 text-right">
+                     <Button
+                         onClick={handleSaveContent}
+                         disabled={isSavingContent || isPageLoading}
+                         variant="secondary" // Use secondary variant for saving
+                     >
+                         {isSavingContent ? "Salvando..." : "Salvar Texto"} {/* Updated button text */}
+                     </Button>
+                 </div>
+
+
+                <Separator className="my-6" />
+
                 {/* Area de Preview do Arquivo */}
+                <h3 className="text-xl font-semibold mb-4">Preview do Arquivo</h3>
                 {showPreview && fileToReview.minio_path ? (
                     <div className="w-full h-[600px] border rounded-md overflow-hidden">
                         <iframe

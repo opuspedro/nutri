@@ -316,12 +316,12 @@ const ReviewFilePage = () => {
   return (
     <div className="container mx-auto p-4 max-w-4xl min-h-screen flex flex-col items-center bg-gradient-to-br from-blue-100 to-blue-300 dark:from-blue-900 dark:to-blue-700 text-gray-900 dark:text-gray-100">
       {/* Main title: Person's Name */}
-      <h1 className="text-3xl font-bold text-center mb-4">
+      <h1 className="text-3xl font-bold text-center mb-2"> {/* Reduced bottom margin */}
         {isLoadingSheetData ? "Carregando nome..." : sheetData?.row?.[PERSON_NAME_COLUMN_INDEX] || "Nome Desconhecido"}
       </h1>
-      {/* Secondary title: Cleaned File Name */}
-      <h2 className="text-2xl text-center text-gray-700 dark:text-gray-300 mb-8">
-        Arquivo: {fileToReview ? cleanFileName(fileToReview.name) : fileId}
+      {/* Subtitle: Cleaned File Name (Phone Number) */}
+      <h2 className="text-xl text-center text-gray-700 dark:text-gray-300 mb-8"> {/* Reduced font size slightly */}
+        Número: {fileToReview ? cleanFileName(fileToReview.name) : fileId} {/* Use cleanFileName and add prefix */}
       </h2>
 
 

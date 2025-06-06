@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast";
-import { markFileAsReviewed, getFileById } from "@/state/reviewState"; // Import file-based functions
+import { updateFileStatus, getFileById } from "@/state/reviewState"; // Correctly import updateFileStatus
 import { Download, RefreshCw } from "lucide-react"; // Removed Eye, EyeOff icons
 import { supabase } from "@/integrations/supabase/client"; // Import Supabase client
 import { cleanFileName } from "@/lib/utils"; // Import the utility function
@@ -19,12 +19,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"; // Import Dialog components
 
-// Define the type for a single file
+// Define the type for a single file - now includes status
 interface ReviewFile {
   id: string; // This is the file ID
   name: string;
   minio_path: string;
   created_at: string;
+  status: 'confirmed' | 'denied' | null; // Include status
 }
 
 // Define a type for the data fetched from Google Sheets
@@ -61,6 +62,7 @@ const ReviewFilePage = () => {
      setIsLoadingFile(true);
      const loadingToastId = showLoading(`Carregando arquivo ${id}...`);
      try {
+       // getFileById now fetches the status column
        const file = await getFileById(id);
        setFileToReview(file);
        if (!file) {
@@ -173,6 +175,8 @@ const ReviewFilePage = () => {
       console.log("Current sheetData state:", sheetData);
       // Add a log to check the specific value for the name
       if (sheetData?.row) {
+          // Define the column index for the person's name (C is index 2 in the B:BA range)
+          const PERSON_NAME_COLUMN_INDEX = 2;
           console.log(`Value at PERSON_NAME_COLUMN_INDEX (${PERSON_NAME_COLUMN_INDEX}):`, sheetData.row[PERSON_NAME_COLUMN_INDEX]);
       }
   }, [sheetData]);
@@ -278,7 +282,8 @@ const ReviewFilePage = () => {
     const loadingToastId = showLoading("Enviando confirmação...");
 
     try {
-      await markFileAsReviewed(fileId, 'confirmed'); // Use the file-based function
+      // Use the correctly imported updateFileStatus function
+      await updateFileStatus(fileId, 'confirmed');
       showSuccess(`Revisão do arquivo ${fileId} confirmada com sucesso!`);
       navigate('/'); // Navigate back to index
 
@@ -298,7 +303,8 @@ const ReviewFilePage = () => {
     const loadingToastId = showLoading("Enviando negação...");
 
     try {
-      await markFileAsReviewed(fileId, 'denied'); // Use the file-based function
+      // Use the correctly imported updateFileStatus function
+      await updateFileStatus(fileId, 'denied');
       showSuccess(`Revisão do arquivo ${fileId} negada com sucesso!`);
       navigate('/'); // Navigate back to index
 

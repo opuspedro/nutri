@@ -71,12 +71,12 @@ const ReviewFilePage = () => {
    const fetchSheetData = async (fileName: string) => {
      setIsLoadingSheetData(true);
      // Use the cleaned file name for the sheet lookup
-     const cleanedName = cleanFileName(fileName);
-     console.log(`Fetching sheet data for cleaned file name: ${cleanedName}`);
+     // The cleaning now happens inside the Edge Function
+     console.log(`Fetching sheet data for file (will be cleaned in EF): ${fileName}`);
      try {
        // Invoke the Edge Function
        const { data, error } = await supabase.functions.invoke('fetch-sheet-data', {
-         body: { fileName: cleanedName }, // Pass the cleaned name
+         body: { fileName: fileName }, // Pass the original name, EF will clean it
        });
 
        if (error) {
@@ -88,7 +88,7 @@ const ReviewFilePage = () => {
          // Assuming data.data is { header: string[], row: string[] }
          setSheetData(data.data as SheetData);
        } else {
-         console.log(`Edge Function returned no data for cleaned name "${cleanedName}". This might mean no matching row was found.`);
+         console.log(`Edge Function returned no data for file "${fileName}". This might mean no matching row was found.`);
          setSheetData(null); // No data found for this file
        }
      } catch (error) {
@@ -106,6 +106,7 @@ const ReviewFilePage = () => {
        try {
            const response = await fetch(minioPath);
            console.log(`Fetch response status for content: ${response.status}`);
+           console.log(`Fetch response headers for content:`, response.headers); // Log headers
            if (!response.ok) {
                const errorText = await response.text(); // Read error body
                console.error(`Error fetching file content: ${response.status} ${response.statusText}`, errorText);
@@ -115,6 +116,7 @@ const ReviewFilePage = () => {
            }
            const textContent = await response.text();
            console.log("File content fetched successfully.");
+           // console.log("Fetched content (first 100 chars):", textContent ? textContent.substring(0, 100) : 'Empty content'); // Log snippet
            setFileContent(textContent);
        } catch (error: any) {
            console.error("Failed to fetch file content:", error);
@@ -136,7 +138,7 @@ const ReviewFilePage = () => {
         // If file details are successfully fetched, then fetch sheet data and file content
         if (file) {
             if (file.name) {
-                // Use the original file name here, cleanFileName is used inside fetchSheetData
+                // Use the original file name here, cleaning happens inside fetchSheetData EF
                 fetchSheetData(file.name);
             }
             if (file.minio_path) {

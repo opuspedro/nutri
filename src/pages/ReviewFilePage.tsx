@@ -9,6 +9,15 @@ import { Download, RefreshCw } from "lucide-react"; // Removed Eye, EyeOff icons
 import { supabase } from "@/integrations/supabase/client"; // Import Supabase client
 import { cleanFileName } from "@/lib/utils"; // Import the utility function
 import { Textarea } from "@/components/ui/textarea"; // Import Textarea for editing
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"; // Import Dialog components
 
 // Define the type for a single file
 interface ReviewFile {
@@ -40,6 +49,8 @@ const ReviewFilePage = () => {
   const [regenerating, setRegenerating] = useState(false); // State for PDF regeneration
   const [fileContent, setFileContent] = useState<string | null>(null); // State for file content, use null initially
   const [isSavingContent, setIsSavingContent] = useState(false); // State for saving content
+  const [isSaveConfirmDialogOpen, setIsSaveConfirmDialogOpen] = useState(false); // State for save confirmation dialog
+
 
   // Helper to check if the file is a TXT file (still needed for Regenerate PDF button)
   const isTxtFile = fileToReview?.name?.toLowerCase().endsWith('.txt') || false;
@@ -234,15 +245,18 @@ const ReviewFilePage = () => {
           if (error) {
               console.error("Error invoking save-file-content Edge Function:", error);
               showError(`Falha ao salvar conteúdo do arquivo: ${error.message}`);
+              // Don't navigate on error, let the user see the error toast
           } else {
               console.log("Save file content Edge Function response:", data);
               showSuccess("Conteúdo do arquivo salvo com sucesso!");
-              // Optionally, refetch file content to ensure UI is in sync,
-              // or just rely on the state update from the textarea.
+              // Close the dialog and navigate on success
+              setIsSaveConfirmDialogOpen(false); // Close the dialog
+              navigate('/'); // Navigate back to index
           }
       } catch (error: any) {
           console.error("Failed to call save-file-content Edge Function:", error);
           showError(error.message || "Falha ao salvar conteúdo do arquivo.");
+          // Don't navigate on error
       } finally {
           dismissToast(loadingToastId);
           setIsSavingContent(false);
@@ -349,15 +363,41 @@ const ReviewFilePage = () => {
                         disabled={isPageLoading} // Disable editing while loading or processing
                     />
                 )}
-                 {/* Save Content Button */}
+                 {/* Save Content Button wrapped in DialogTrigger */}
                  <div className="mt-4 text-right">
-                     <Button
-                         onClick={handleSaveContent}
-                         disabled={isSavingContent || isPageLoading || fileContent === null} // Disable if content is null
-                         variant="secondary" // Use secondary variant for saving
-                     >
-                         {isSavingContent ? "Salvando..." : "Salvar Texto"} {/* Updated button text */}
-                     </Button>
+                     <Dialog open={isSaveConfirmDialogOpen} onOpenChange={setIsSaveConfirmDialogOpen}>
+                         <DialogTrigger asChild>
+                             <Button
+                                 disabled={isPageLoading || fileContent === null} // Disable if content is null or page is loading
+                                 variant="secondary" // Use secondary variant for saving
+                             >
+                                 Salvar Texto
+                             </Button>
+                         </DialogTrigger>
+                         <DialogContent>
+                             <DialogHeader>
+                                 <DialogTitle>Confirmar Salvamento</DialogTitle>
+                                 <DialogDescription>
+                                     Ao confirmar, o conteúdo editado do arquivo será enviado para o webhook configurado e você retornará para a lista de arquivos pendentes.
+                                 </DialogDescription>
+                             </DialogHeader>
+                             <DialogFooter>
+                                 <Button
+                                     variant="outline"
+                                     onClick={() => setIsSaveConfirmDialogOpen(false)} // Close dialog on Cancel
+                                     disabled={isSavingContent} // Disable while saving
+                                 >
+                                     Cancelar
+                                 </Button>
+                                 <Button
+                                     onClick={handleSaveContent} // Call save function on Confirm
+                                     disabled={isSavingContent} // Disable while saving
+                                 >
+                                     {isSavingContent ? "Salvando..." : "Confirmar Salvar"}
+                                 </Button>
+                             </DialogFooter>
+                         </DialogContent>
+                     </Dialog>
                  </div>
 
 

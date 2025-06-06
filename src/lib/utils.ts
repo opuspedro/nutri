@@ -5,25 +5,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Function to remove '@s.whatsapp.net' and '.txt' from file names
-// Consistent with Edge Function logic: remove whatsapp first, then txt
+// Function to remove '.txt' and then '@s.whatsapp.net' from file names
 export function cleanFileName(fileName: string): string {
   if (!fileName) return "";
   let cleaned = fileName;
 
-  // Remove WhatsApp suffix if present at the end
-  const whatsappSuffix = "@s.whatsapp.net";
-  if (cleaned.endsWith(whatsappSuffix)) {
-    cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
-  }
-
-  // Remove .txt extension if present (case-insensitive)
+  // Remove .txt extension if present (case-insensitive) - Do this first
   const txtSuffix = ".txt";
   if (cleaned.toLowerCase().endsWith(txtSuffix)) {
       cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
   }
 
-  console.log(`cleanFileName (Frontend - Consistent): Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
+  // Remove WhatsApp suffix if present at the end - Do this second
+  const whatsappSuffix = "@s.whatsapp.net";
+  if (cleaned.endsWith(whatsappSuffix)) {
+    cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
+  }
+
+  console.log(`cleanFileName (Frontend - New Logic): Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
 
   return cleaned;
 }

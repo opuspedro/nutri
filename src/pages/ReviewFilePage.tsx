@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import { showLoading, showSuccess, showError, dismissToast } from "@/utils/toast";
 import { markFileAsReviewed, getFileById } from "@/state/reviewState"; // Import file-based functions
-import { Download, Eye, EyeOff, RefreshCw } from "lucide-react"; // Import icons, including RefreshCw
+import { Download, RefreshCw } from "lucide-react"; // Removed Eye, EyeOff icons
 import { supabase } from "@/integrations/supabase/client"; // Import Supabase client
 import { cleanFileName } from "@/lib/utils"; // Import the utility function
 import { Textarea } from "@/components/ui/textarea"; // Import Textarea for editing
@@ -34,14 +34,14 @@ const ReviewFilePage = () => {
   const [sheetData, setSheetData] = useState<SheetData | null>(null); // State for sheet data
   const [isLoadingSheetData, setIsLoadingSheetData] = useState(false); // Loading state for sheet data
   const [downloading, setDownloading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false); // State to control preview visibility
+  // Removed showPreview state
   const [confirming, setConfirming] = useState(false);
   const [denying, setDenying] = useState(false);
   const [regenerating, setRegenerating] = useState(false); // State for PDF regeneration
-  const [fileContent, setFileContent] = useState<string>(""); // State for file content
+  const [fileContent, setFileContent] = useState<string | null>(null); // State for file content, use null initially
   const [isSavingContent, setIsSavingContent] = useState(false); // State for saving content
 
-  // Helper to check if the file is a TXT file
+  // Helper to check if the file is a TXT file (still needed for Regenerate PDF button)
   const isTxtFile = fileToReview?.name?.toLowerCase().endsWith('.txt') || false;
 
 
@@ -70,11 +70,13 @@ const ReviewFilePage = () => {
    // Function to fetch sheet data
    const fetchSheetData = async (fileName: string) => {
      setIsLoadingSheetData(true);
-     console.log(`Fetching sheet data for file: ${fileName}`);
+     // Use the cleaned file name for the sheet lookup
+     const cleanedName = cleanFileName(fileName);
+     console.log(`Fetching sheet data for cleaned file name: ${cleanedName}`);
      try {
        // Invoke the Edge Function
        const { data, error } = await supabase.functions.invoke('fetch-sheet-data', {
-         body: { fileName: fileName },
+         body: { fileName: cleanedName }, // Pass the cleaned name
        });
 
        if (error) {
@@ -86,7 +88,7 @@ const ReviewFilePage = () => {
          // Assuming data.data is { header: string[], row: string[] }
          setSheetData(data.data as SheetData);
        } else {
-         console.log("Edge Function returned no data. This might mean no matching row was found for the file name.");
+         console.log(`Edge Function returned no data for cleaned name "${cleanedName}". This might mean no matching row was found.`);
          setSheetData(null); // No data found for this file
        }
      } catch (error) {
@@ -100,22 +102,24 @@ const ReviewFilePage = () => {
 
    // Function to fetch file content
    const fetchFileContent = async (minioPath: string) => {
-       console.log(`Fetching file content from: ${minioPath}`);
+       console.log(`Attempting to fetch file content from URL: ${minioPath}`);
        try {
            const response = await fetch(minioPath);
+           console.log(`Fetch response status for content: ${response.status}`);
            if (!response.ok) {
-               console.error(`Error fetching file content: ${response.status} ${response.statusText}`);
+               const errorText = await response.text(); // Read error body
+               console.error(`Error fetching file content: ${response.status} ${response.statusText}`, errorText);
                showError(`Falha ao carregar conteúdo do arquivo: ${response.statusText}`);
-               setFileContent("");
+               setFileContent(""); // Set to empty string on error
                return;
            }
            const textContent = await response.text();
            console.log("File content fetched successfully.");
            setFileContent(textContent);
-       } catch (error) {
+       } catch (error: any) {
            console.error("Failed to fetch file content:", error);
            showError("Falha ao carregar conteúdo do arquivo.");
-           setFileContent("");
+           setFileContent(""); // Set to empty string on error
        }
    };
 
@@ -132,11 +136,17 @@ const ReviewFilePage = () => {
         // If file details are successfully fetched, then fetch sheet data and file content
         if (file) {
             if (file.name) {
+                // Use the original file name here, cleanFileName is used inside fetchSheetData
                 fetchSheetData(file.name);
             }
             if (file.minio_path) {
                  fetchFileContent(file.minio_path); // Fetch content using the path
+            } else {
+                 console.warn(`File ${fileId} has no minio_path. Cannot fetch content.`);
+                 setFileContent(""); // Set to empty if no path
             }
+        } else {
+             setFileContent(""); // Set to empty if file not found
         }
     });
 
@@ -169,11 +179,7 @@ const ReviewFilePage = () => {
     }
   };
 
-  // Function to handle file preview - now toggles visibility
-  const handlePreview = () => {
-     if (!fileToReview) return;
-     setShowPreview(!showPreview); // Toggle preview visibility
-  };
+  // Removed handlePreview function
 
   // Function to handle PDF regeneration
   const handleRegeneratePdf = async () => {
@@ -208,7 +214,12 @@ const ReviewFilePage = () => {
 
   // Function to handle saving the edited text content
   const handleSaveContent = async () => {
-      if (!fileId || fileContent === null) return; // Ensure fileId and content exist
+      // Allow saving even if fileContent is an empty string (clearing content)
+      if (!fileId || fileContent === null) {
+          console.warn("Cannot save content: fileId is missing or fileContent is null.");
+          showError("Não foi possível salvar: ID do arquivo ou conteúdo ausente.");
+          return;
+      }
       setIsSavingContent(true);
       const loadingToastId = showLoading("Salvando conteúdo do arquivo...");
 
@@ -314,27 +325,7 @@ const ReviewFilePage = () => {
                     <CardTitle className="text-lg font-medium truncate">ID do Arquivo: {fileToReview.id}</CardTitle>
                     <CardDescription className="text-gray-500 dark:text-gray-400 text-sm">Criado em: {new Date(fileToReview.created_at).toLocaleDateString()}</CardDescription>
                 </div>
-                 {/* Preview Button - Moved here */}
-                <Button
-                  variant="outline"
-                  onClick={handlePreview}
-                  disabled={isPageLoading || isTxtFile} // Disable if page is loading, processing review, OR is a TXT file
-                  size="sm" // Make button smaller to fit header
-                >
-                   {isTxtFile ? (
-                       <>
-                           <EyeOff className="mr-2 h-4 w-4" /> Prévia Indisponível
-                       </>
-                   ) : showPreview ? (
-                       <>
-                           <EyeOff className="mr-2 h-4 w-4" /> Esconder Preview
-                       </>
-                   ) : (
-                       <>
-                           <Eye className="mr-2 h-4 w-4" /> Mostrar Preview
-                       </>
-                   )}
-                </Button>
+                 {/* Removed Preview Button */}
               </CardHeader>
               <CardContent>
                 {/* Area de Edição de Texto */}
@@ -342,6 +333,10 @@ const ReviewFilePage = () => {
                 {isLoadingFile ? (
                      <div className="text-center text-gray-500 dark:text-gray-400">
                         Carregando conteúdo...
+                     </div>
+                ) : fileContent === null ? ( // Check if content is still null (initial state)
+                     <div className="text-center text-gray-500 dark:text-gray-400">
+                        Não foi possível carregar o conteúdo do arquivo. Verifique o log de erros.
                      </div>
                 ) : (
                     <Textarea
@@ -356,7 +351,7 @@ const ReviewFilePage = () => {
                  <div className="mt-4 text-right">
                      <Button
                          onClick={handleSaveContent}
-                         disabled={isSavingContent || isPageLoading}
+                         disabled={isSavingContent || isPageLoading || fileContent === null} // Disable if content is null
                          variant="secondary" // Use secondary variant for saving
                      >
                          {isSavingContent ? "Salvando..." : "Salvar Texto"} {/* Updated button text */}
@@ -364,29 +359,9 @@ const ReviewFilePage = () => {
                  </div>
 
 
+                {/* Removed Preview Section and its Separator */}
                 <Separator className="my-6" />
 
-                {/* Area de Preview do Arquivo */}
-                <h3 className="text-xl font-semibold mb-4">Preview do Arquivo</h3>
-                {/* Conditional rendering: Only show iframe if NOT a TXT file AND showPreview is true */}
-                {showPreview && fileToReview.minio_path && !isTxtFile ? (
-                    <div className="w-full h-[600px] border rounded-md overflow-hidden">
-                        <iframe
-                            src={fileToReview.minio_path}
-                            title={`Preview de ${fileToReview.name}`}
-                            className="w-full h-full"
-                            style={{ border: 'none' }}
-                        >
-                            Seu navegador não suporta iframes. Você pode baixar o arquivo para visualizá-lo.
-                        </iframe>
-                    </div>
-                ) : (
-                    <div className="h-32 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 rounded-md">
-                      {isTxtFile ? "Prévia de arquivo TXT não disponível." : "Clique em 'Mostrar Preview' para visualizar o arquivo."}
-                    </div>
-                )}
-
-                <Separator className="my-6" />
 
                 {/* Area de Dados da Planilha Associados */}
                 <h3 className="text-xl font-semibold mb-4">Dados da Planilha Associados</h3>
@@ -435,7 +410,7 @@ const ReviewFilePage = () => {
                 {/* Download Button */}
                 <Button
                   onClick={handleDownload}
-                  disabled={downloading || isPageLoading}
+                  disabled={downloading || isPageLoading || !fileToReview?.minio_path} // Disable if no path
                   variant="outline" // Use outline variant
                 >
                    <Download className="mr-2 h-4 w-4" />

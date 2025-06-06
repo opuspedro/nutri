@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 // Import the official Google Auth library using npm: prefix
 import { GoogleAuth } from 'npm:google-auth-library@9.11.0'; // Use npm: prefix
+// Import the shared utility function
+import { cleanFileName } from '../_shared/utils.ts'; // Import from shared utilities
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,6 +32,11 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Clean the file name before using it for the sheet lookup
+    const cleanedFileName = cleanFileName(fileName);
+    console.log(`Cleaned file name for sheet lookup: "${cleanedFileName}"`);
+
 
     // Get Google Sheets credentials from Supabase Secret
     const credentialsJson = Deno.env.get('GOOGLE_SHEETS_CREDENTIALS_JSON');
@@ -70,18 +77,21 @@ serve(async (req) => {
 
     // --- Configuration ---
     // YOUR Google Sheet ID
-    const SHEET_ID = '1FbU8pwSJ4Avzaq9KXxpWS5zgkBdwiqkHMWDFry8kdPA';
+    const SHEET_ID = Deno.env.get('SHEET_ID') || 'YOUR_SHEET_ID'; // Read from secret
     // YOUR sheet name
-    const SHEET_NAME = "Página1";
+    const SHEET_NAME = Deno.env.get('SHEET_NAME') || 'YOUR_SHEET_NAME'; // Read from secret
     // YOUR range (e.g., 'A1:Z300') - Updated to include B and H:BA
-    const SHEET_RANGE_PART = "B1:BA300";
+    const SHEET_RANGE_PART = Deno.env.get('SHEET_RANGE_PART') || 'YOUR_SHEET_RANGE_PART'; // Read from secret
     // YOUR 0-based index of the column containing the file name (e.g., 1 for Column B)
-    const FILE_NAME_COLUMN_INDEX = 0; // Corrected index to 0 because the range starts at B
+    const FILE_NAME_COLUMN_INDEX_STR = Deno.env.get('FILE_NAME_COLUMN_INDEX') || '0'; // Read from secret, default to '0'
+
+    const FILE_NAME_COLUMN_INDEX = parseInt(FILE_NAME_COLUMN_INDEX_STR, 10);
+
 
     console.log(`Sheet ID: ${SHEET_ID}, Sheet Name: "${SHEET_NAME}", Range Part: "${SHEET_RANGE_PART}", File Name Column Index: ${FILE_NAME_COLUMN_INDEX}`);
 
     // Simplified configuration check
-    if (SHEET_ID === 'YOUR_SHEET_ID' || FILE_NAME_COLUMN_INDEX < 0) {
+    if (SHEET_ID === 'YOUR_SHEET_ID' || SHEET_NAME === 'YOUR_SHEET_NAME' || SHEET_RANGE_PART === 'YOUR_SHEET_RANGE_PART' || isNaN(FILE_NAME_COLUMN_INDEX) || FILE_NAME_COLUMN_INDEX < 0) {
          console.error("Google Sheet configuration is incomplete or incorrect in Edge Function.");
          return new Response(JSON.stringify({ error: 'Server configuration error: Google Sheet details not set correctly.' }), {
            status: 500,
@@ -144,30 +154,29 @@ serve(async (req) => {
     const headerRow = sheetValues[0];
     const dataRows = sheetValues.slice(1); // Skip header row
 
-    // Find the row matching the file name
+    // Find the row matching the CLEANED file name
     const foundRow = dataRows.find(row =>
         // Ensure the row and the target column exist before accessing
-        // FILE_NAME_COLUMN_INDEX is now 0 because the range starts at B
         row && row.length > FILE_NAME_COLUMN_INDEX &&
-        row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === fileName.trim()
+        row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === cleanedFileName.trim() // Use cleanedFileName here
     );
 
     if (foundRow) {
-      console.log(`Found data for file "${fileName}" in sheet.`);
+      console.log(`Found data for cleaned file name "${cleanedFileName}" in sheet.`);
       // Return both header and the found data row
       return new Response(JSON.stringify({ data: { header: headerRow, row: foundRow } }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
-      console.log(`No data found for file "${fileName}" in sheet.`);
+      console.log(`No data found for cleaned file name "${cleanedFileName}" in sheet.`);
       return new Response(JSON.stringify({ data: null, message: 'Data not found for this file.' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in Edge Function:", error);
     // Catch any other errors during execution
     return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {

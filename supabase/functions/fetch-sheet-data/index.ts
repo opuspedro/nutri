@@ -13,11 +13,13 @@ function cleanFileName(fileName: string): string {
     cleaned = cleaned.substring(0, cleaned.length - whatsappSuffix.length);
   }
 
-  // Remove .txt extension if present
+  // Remove .txt extension if present (case-insensitive)
   const txtSuffix = ".txt";
   if (cleaned.toLowerCase().endsWith(txtSuffix)) {
       cleaned = cleaned.substring(0, cleaned.length - txtSuffix.length);
   }
+
+  console.log(`EF cleanFileName: Original "${fileName}" -> Cleaned "${cleaned}"`); // Added log
 
   return cleaned;
 }
@@ -173,15 +175,26 @@ serve(async (req) => {
     const headerRow = sheetValues[0];
     const dataRows = sheetValues.slice(1); // Skip header row
 
+    console.log(`Searching for cleaned file name "${cleanedFileName}" in column index ${FILE_NAME_COLUMN_INDEX} of data rows.`);
+    console.log("First 5 data rows:", dataRows.slice(0, 5)); // Log first few data rows
+
     // Find the row matching the CLEANED file name
-    const foundRow = dataRows.find(row =>
-        // Ensure the row and the target column exist before accessing
-        row && row.length > FILE_NAME_COLUMN_INDEX &&
-        row[FILE_NAME_COLUMN_INDEX] && row[FILE_NAME_COLUMN_INDEX].toString().trim() === cleanedFileName.trim() // Use cleanedFileName here
-    );
+    const foundRow = dataRows.find(row => {
+        const cellValue = row && row.length > FILE_NAME_COLUMN_INDEX ? row[FILE_NAME_COLUMN_INDEX] : undefined;
+        const isMatch = cellValue && cellValue.toString().trim() === cleanedFileName.trim();
+        if (isMatch) {
+            console.log(`Match found! Row:`, row);
+        } else {
+             // Optional: Log non-matches for debugging if needed, but can be noisy
+             // console.log(`No match for "${cleanedFileName}" in row:`, row);
+        }
+        return isMatch;
+    });
+
 
     if (foundRow) {
       console.log(`Found data for cleaned file name "${cleanedFileName}" in sheet.`);
+      console.log("Found row data:", foundRow); // Log the found row
       // Return both header and the found data row
       return new Response(JSON.stringify({ data: { header: headerRow, row: foundRow } }), {
         status: 200,
@@ -196,7 +209,7 @@ serve(async (req) => {
     }
 
   } catch (error: any) {
-    console.error("Error in Edge Function:", error);
+    console.error("Error in 'fetch-sheet-data' Edge Function:", error);
     // Catch any other errors during execution
     return new Response(JSON.stringify({ error: error.message || 'An unexpected error occurred in the Edge Function.' }), {
       status: 500,

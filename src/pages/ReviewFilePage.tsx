@@ -66,6 +66,7 @@ const ReviewFilePage = () => {
        if (!file) {
             showError("Arquivo não encontrado.");
        }
+       console.log("Fetched file details:", file); // Log fetched file details
        return file; // Return file data to be used for fetching sheet data
      } catch (error) {
        console.error("Failed to fetch file:", error);
@@ -148,6 +149,8 @@ const ReviewFilePage = () => {
     fetchFile(fileId).then(file => {
         // If file details are successfully fetched, then fetch sheet data and file content
         if (file) {
+            console.log("File name before cleaning:", file.name); // Log original name
+            console.log("File name after cleaning:", cleanFileName(file.name)); // Log cleaned name
             if (file.name) {
                 // Use the original file name here, cleaning happens inside fetchSheetData EF
                 fetchSheetData(file.name);
